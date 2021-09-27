@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/noise_raster" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
