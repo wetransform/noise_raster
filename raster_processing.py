@@ -39,10 +39,10 @@ def sum_sound_level_3D(sound_levels: np.array):
 
     return out
 
-def vectorize(out_ds, out_poly):
+def vectorize(in_ds, out_poly):
 
     #Open raster
-    check_ds = gdal.Open(out_ds)
+    check_ds = gdal.Open(in_ds)
 
     #Get raster band
     band1 = check_ds.GetRasterBand(1)
@@ -67,11 +67,24 @@ def vectorize(out_ds, out_poly):
     gdal.Polygonize(srcBand=band1,maskBand=None,outLayer=dst_layer,iPixValField=0)
 
     # Close dataset
+    check_ds = None
     dst_ds = None
     gdal.Unlink(out_ds)
 
 
-def check_projection():
+def check_projection(in_ds):
+
+    ###Open raster
+    check_ds = gdal.Open(in_ds)
+
+    ###Check projection of source raster
+    prj = check_ds.GetProjection()
+    src_srs = osr.SpatialReference(wkt=prj)
+    epsg_code = src_srs.GetAttrValue('AUTHORITY', 1)
+    print(epsg_code)
+    
+    if src_srs is None:
+        raise ValueError('Spatial reference system is not defined')
 
 
 
@@ -86,7 +99,7 @@ def reproject(XRes, YRes, out_ds, ds):
 
     #Reproject raster
     w = gdal.Warp(destNameOrDestDS=out_ds, srcDSOrSrcDSTab=ds, options=wo)
-    
+
     #Close raster
     w = None
 
