@@ -5,6 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3b7ba63a-fb51-407a-b793-abbeea64ddd2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noise_raster_v1.py" beforeDir="false" afterPath="$PROJECT_DIR$/noise_raster_v1.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

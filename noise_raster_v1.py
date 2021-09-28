@@ -6,7 +6,6 @@
 """
 
 from osgeo import gdal, ogr, osr
-from sound_level_add_3D_efficient import sum_sound_level_3D 
 import os
 import numpy as np
 
@@ -45,7 +44,7 @@ input_3D = np.stack([ras1band, ras2band], axis=0)
 
 ###Call calculation function
 
-out = sum_sound_level_3D(input_3D) 
+data_out = sum_sound_level_3D(input_3D)
 
 ###Print out information about the returned raster
 print('Array data_out returned from calculation:', data_out)
