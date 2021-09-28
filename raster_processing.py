@@ -95,7 +95,7 @@ def reproject(XRes, YRes, out_ds, ds):
     dest_srs.ImportFromEPSG(3035)
 
     #Set options for reprojection
-    wo = gdal.WarpOptions(dstSRS='EPSG:3035', XRes, YRes)
+    wo = gdal.WarpOptions(dstSRS='EPSG:3035', xRes=XRes, yRes=YRes)
 
     #Reproject raster
     w = gdal.Warp(destNameOrDestDS=out_ds, srcDSOrSrcDSTab=ds, options=wo)
@@ -104,10 +104,11 @@ def reproject(XRes, YRes, out_ds, ds):
     w = None
 
 def resample():
-
+    pass
 
 
 def validate_source_format():
-
+    pass
 
 def validate_topo():
+    pass
