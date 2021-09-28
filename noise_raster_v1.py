@@ -48,15 +48,25 @@ data_out = sum_sound_level_3D(input_3D)
 
 ###Print out information about the returned raster
 print('Array data_out returned from calculation:', data_out)
-numOfRows11 = data_out.shape[0]
-numOfColumns11 = data_out.shape[1]
-print('Number of Rows : ', numOfRows11)
-print('Number of Columns : ', numOfColumns11)
 
-####Write the output raster
+###Get columns and rows of output array
+cols = data_out.shape[1]
+rows = data_out.shape[0]
+
+####Create the output raster
 driver = gdal.GetDriverByName("GTiff")
-dsOut = driver.Create("C:/Users/KL/development/test3035.tif",1770,2570,1,eType=gdal.GDT_Float64)
+dsOut = driver.Create("C:/Users/KL/development/test25832.tif",cols,rows,1,eType=gdal.GDT_Float64)
+
+###Get affine transformation coefficients from source raster
+dsOut.SetGeoTransform(ras1.GetGeoTransform())
+
+###Write the output raster
 bandOut = dsOut.GetRasterBand(1).WriteArray(data_out)
+
+###Set the crs of output raster
+outRasterSRS = osr.SpatialReference()
+outRasterSRS.ImportFromEPSG(25832)
+dsOut.SetProjection(outRasterSRS.ExportToWkt())
 
 ###Close the datasets
 ras1 = None
