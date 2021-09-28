@@ -6,6 +6,7 @@
 """
 
 from osgeo import gdal, ogr, osr
+from sound_level_add_3D_efficient import sum_sound_level_3D 
 import os
 import numpy as np
 
@@ -38,12 +39,19 @@ from .raster_processing import sum_sound_level_3D, resample, reproject, vectoriz
     print('Number of Columns in raster array number one: ', numOfColumns1)
     print('Number of Columns in raster array number two : ', numOfColumns)
 
-    ####Calculation
-    grid = []
-    input_list = [ras1band, ras2band]
+	
+    ####Calculation - you don't need this anymore
+    ## grid = []
+    ## input_list = [ras1band, ras2band]
+
+    ### Create input for calc function (3D array with all sound levels stack) 
+    input_3D = np.stack([ras1band, ras2band], axis=0)
 
     ###Call calculation function
-    sum_sound_level_3D(input_list)
+    ## sum_sound_level_3D(input_list)
+    out = sum_sound_level_3D(input_3D) 
+    ## check if out is what you expect to be	
+
 
     ###Print out information about the returned raster
     print('Array data_out returned from calculation:', data_out)
