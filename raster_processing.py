@@ -7,6 +7,7 @@
 
 from osgeo import gdal, ogr, osr
 import os
+import logging
 import numpy as np
 
 
@@ -22,10 +23,14 @@ def sum_sound_level_3D(sound_levels: np.array):
     """
 
     if not isinstance(sound_levels, np.ndarray):
-        raise TypeError('Input is not an array')
+        logging.error('Input of sum sound level is not an array')
+        raise TypeError('Input of sum sound level is not an array')
+
 
     if len(sound_levels.shape) != 3:
-        raise ValueError('Input array not 3D ')
+        logging.error('Input of sum sound level array is not 3D')
+        raise ValueError('Input of sum sound level array is not 3D ')
+
 
     l, m, n = sound_levels.shape
 
