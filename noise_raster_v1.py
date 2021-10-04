@@ -4,20 +4,65 @@
  NoiseRaster
  ***************************************************************************/
 """
+from typing import Any
 
 from osgeo import gdal, ogr, osr
 import os
 import numpy as np
 
-from raster_processing import sum_sound_level_3D, resample, reproject, vectorize, check_projection, validate_topo, validate_source_format
+from raster_processing import sum_sound_level_3D, merge_rasters, reproject, vectorize, check_projection, validate_topo, validate_source_format
 
-###Get source data paths
-src_pths = [r"C:\Users\KL\Downloads\Beispieldaten_DF48_Raster\Beispieldaten_DF48_Raster\Rail_NW\Daten_UBA\Daten_UBA\Raster_DAY_SCS\DAY_SCS_RAST_DAY.ASC",r"C:\Users\KL\Downloads\Beispieldaten_DF48_Raster\Beispieldaten_DF48_Raster\Road_NW\Projekt_ruhige_Gebiete_Rasterlärmkarten_alle_Strassen\Projekt_ruhige_Gebiete_Rasterlärmkarten_alle_Strassen\05111000_STR_RAST_NGT.ASC\DAY_STR_RAST_NGT.ASC"]
+###Input rail noise folder
 
-###Open source rasters
-ras1 = gdal.Open(src_pths[0])
-ras2 = gdal.Open(src_pths[1])
-print(str(src_pths[0]))
+src_pths_ra =r'C:\Users\KL\Downloads\Beispieldaten_DF48_Raster\Beispieldaten_DF48_Raster\Rail_NW\Daten_UBA\Daten_UBA\Raster_DEN_SCS'
+
+###Input road noise folder path
+
+src_pths_ro =r'C:\Users\KL\Downloads\Beispieldaten_DF48_Raster\Beispieldaten_DF48_Raster\Road_NW\Projekt_ruhige_Gebiete_Rasterlärmkarten_alle_Strassen\Projekt_ruhige_Gebiete_Rasterlärmkarten_alle_Strassen'
+
+###Make list of all input rail noise source rasters
+
+src_ra = []
+for root, directories, file in os.walk(src_pths_ra):
+    for file in file:
+        if file.endswith(".ASC"):
+            src_ra.append(os.path.join(root,file))
+
+###Make list of all input road noise source rasters
+
+src_ro = []
+for root, directories, file in os.walk(src_pths_ro):
+    for file in file:
+        if file.endswith(".ASC"):
+            src_ro.append(os.path.join(root,file))
+
+###Check CRS of each input raster
+
+for ras_ra in src_ra:
+    check_projection(ras_ra)
+
+for ras_ro in src_ro:
+    check_projection(ras_ro)
+
+###Create output vrt raster for merged rail noise
+
+out_vrt_ra = "C:/Users/KL/development/test_ra.vrt"
+
+###Create output vrt raster for merged road noise
+
+out_vrt_ro = "C:/Users/KL/development/test_ro.vrt"
+
+###Merge all input rail noise rasters
+
+merge_rasters(src_ra,out_vrt_ra)
+
+###Merge all input road noise rasters
+
+merge_rasters(src_ro, out_vrt_ro)
+
+###Open merged source rasters
+ras1 = gdal.Open(out_vrt_ro)
+ras2 = gdal.Open(out_vrt_ra)
 
 ##Read rasters as numpy 2d arrays
 ras1band = np.array(ras1.GetRasterBand(1).ReadAsArray())
@@ -75,3 +120,6 @@ ras1band = None
 ras2band = None
 bandOut = None
 dsOut = None
+
+###Vectorize energetically added raster including all noise sources
+vectorize(dsOut, "C:/Users/KL/development/test25832.tif")

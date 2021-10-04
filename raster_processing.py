@@ -103,9 +103,23 @@ def reproject(XRes, YRes, out_ds, ds):
     #Close raster
     w = None
 
-def resample():
-    pass
+def merge_rasters(ras_list:list, out_vrt):
 
+    ###Check resolution of input rasters
+    #for ras in ras_list:
+        ###Open raster
+        #r = gdal.Open(ras)
+        #gt = r.GetGeoTransform()
+        ###Get cell resolution
+        #pixelSizeX = gt[1]
+        #pixelSizeY = -gt[5]
+        ###Check size resolution is 10
+        #if not pixelSizeX == pixelSizeY != 10:
+            #raise ValueError('Cell resolution is not 10')
+
+    ###Merge rasters in list
+    gdal.BuildVRT(out_vrt, ras_list)
+    out_vrt = None
 
 def validate_source_format():
     pass
