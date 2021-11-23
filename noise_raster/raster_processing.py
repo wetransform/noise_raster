@@ -79,10 +79,20 @@ def check_extent(extent_list:list):
         # Open dataset
         check_extent = gdal.Open(ds)
 
+        # Get extent of raster
         xmin, xpixel, _, ymax, _, ypixel = check_extent.GetGeoTransform()
-        width, height = check_extent.RasterXSize, check_extent.RasterYSize
-        xmax = xmin + width
-        ymin = ymax + height
+        xmax = xmin + (xpixel / 2)
+        ymin = ymax + (abs(ypixel) / 2)
+
+        if (xmax % 100 != 0) or (ymin % 100 != 0):
+            # Get source file name
+            f_name = os.path.basename(ds).split(".")[0]
+            # Write file name and extent to logfile
+            logger.info('Filename: {}'.format(str(f_name)))
+            logger.info('Pixel value: {}'.format(str(xmax)))
+            logger.info('Pixel value: {}'.format(str(ymin)))
+        else:
+            pass
 
 def build_virtual_raster(in_vrt:list):
     """
