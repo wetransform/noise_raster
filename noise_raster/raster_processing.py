@@ -116,7 +116,7 @@ def build_virtual_raster(in_vrt:list):
     # Write to disk
     merged_vrt = None
 
-def create_masked_array(in_ds):
+def create_zero_array(in_ds):
     """
     Create masked array as input to energetic addition. Masked arrays handle no data values.
     """
@@ -126,9 +126,9 @@ def create_masked_array(in_ds):
     data = ds.ReadAsArray()
 
     # Create masked array with no data values
-    maskedData = np.ma.array(data, mask=(data == -99.0))
+    zeroData = np.where(data < 0, 0, data)
 
-    return maskedData
+    return zeroData
 
 def create_raster(sound_array, out_pth, merged_vrt):
     """
@@ -152,7 +152,7 @@ def create_raster(sound_array, out_pth, merged_vrt):
 
     # Write the output raster
     dsOut.GetRasterBand(1).WriteArray(sound_array)
-    dsOut.GetRasterBand(1).SetNoDataValue(-99.0)
+    dsOut.GetRasterBand(1).SetNoDataValue(0)
 
     # Set the crs of output raster
     outRasterSRS = osr.SpatialReference()
@@ -363,7 +363,7 @@ def validate_source_format(srcData:list):
         # Loop pixel values in array and write negative values to file
         for arr in band:
             for pixel in arr:
-                if 0 > pixel > -90:
+                if (pixel < -90) or (pixel == 0):
                     # Start logging raster information to file
                     logger.info('Raster dataset: {}'.format(str(srcDs)))
                     logger.info('Pixel value: {}'.format(str(pixel)))
