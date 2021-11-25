@@ -10,17 +10,24 @@ from qgis.core import QgsRasterLayer, QgsProcessing
 import sys
 import os
 import processing
+import tempfile
 import subprocess
 import numpy as np
 import logging
 import time
 
+# Get current temp directory
+
+cur_temp_dir = tempfile.gettempdir()
+rep_temp_dir = cur_temp_dir.replace(os.sep, '/')
+temp_dir = rep_temp_dir + "/"
+
 # Initiate logging
 
+logfile = temp_dir + "logfile.txt"
 formatter = '%(levelname)s: %(asctime)s - %(name)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=formatter, filename='C:/Users/KL/development/logfile.txt') #stream=sys.stdout if stdout, not stderr
+logging.basicConfig(level=logging.INFO, format=formatter, filename=logfile) #stream=sys.stdout if stdout, not stderr
 logger = logging.getLogger("noise_raster_v1")
-
 
 def sum_sound_level_3D(sound_levels: np.array):
     """
@@ -98,7 +105,7 @@ def build_virtual_raster(in_vrt:list):
     """
     Build virtual multi-band raster as input to addition
     """
-    merged_vrt = 'C:/Users/KL/development/all_noise_vrt.vrt'
+    merged_vrt = temp_dir + 'allnoise.vrt'
 
     # Set options
     vrto = gdal.BuildVRTOptions(separate=True)
@@ -189,7 +196,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
         selectedTable = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
 
     # Reclassification output path
-    out_reclass = 'C:/Users/KL/development/reclass_vrt.tif'
+    out_reclass = temp_dir + 'reclass.tif'
 
     # Set reclassify algorithm parameters
     alg_params = {
@@ -250,7 +257,7 @@ def reproject(input_files_path:list):
         f_name = os.path.basename(input).split(".")[0]
 
         # Create reprojected raster
-        out_tif = "C:/Users/KL/development/" + f_name + "_3035.tif"
+        out_tif = temp_dir + f_name + "_3035.tif"
 
         # Reproject rasters
         gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=input, options=gdal.WarpOptions(format='GTiff', dstSRS='EPSG:3035', outputType=gdal.GDT_Float32, srcNodata=-99.0, dstNodata=-99.0))
@@ -277,10 +284,10 @@ def merge_rasters(input_files_path:list, out=None):
         for input in input_files_path:
 
             # Create merged vrt
-            out_vrt = "C:/Users/KL/development/" + str(counter) + "_3035.vrt"
+            out_vrt = temp_dir + str(counter) + "_3035.vrt"
 
             # Create converted tif
-            out_tif = "C:/Users/KL/development/" + str(counter) + "_3035.tif"
+            out_tif = temp_dir + str(counter) + "_3035.tif"
 
             # Set vrt options
             gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:3035', srcNodata=-99.0)
@@ -306,7 +313,7 @@ def merge_rasters(input_files_path:list, out=None):
         """
 
         # Create merged vrt
-        out_vrt = "C:/Users/KL/development/vrt_3035.vrt"
+        out_vrt = temp_dir + "_3035.vrt"
 
         # Set vrt options
         gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:3035', srcNodata=-99.0)
@@ -362,7 +369,7 @@ def validate_source_format(srcData:list):
                     logger.info('Pixel value: {}'.format(str(pixel)))
 
         # Set all negative pixel values to 0. Recommendation from https://gdal.org/programs/gdal_calc.html
-        out_calc = "C:/Users/KL/development/" + f_name + "calc.tif"
+        out_calc = temp_dir + f_name + "calc.tif"
 
         # Parameters for gdal raster calculator
         alg_params = {
@@ -380,7 +387,7 @@ def validate_source_format(srcData:list):
         to = gdal.TranslateOptions(format="GTiff", outputType=gdal.GDT_Float32)
 
         # Convert files to tif with same data type and same no data value
-        out_tif = "C:/Users/KL/development/" + f_name + ".tif"
+        out_tif = temp_dir + f_name + ".tif"
         gdal.Translate(out_tif, result['OUTPUT'], options=to)
 
         # Read existing no data value(s)
