@@ -145,6 +145,9 @@ def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
 
     # Create the output raster
     driver = gdal.GetDriverByName("GTiff")
+    # Delete existing raster if file already exists
+    if os.path.exists(out_pth):
+        driver.DeleteDataSource(out_pth)
     dsOut = driver.Create(out_pth, cols, rows, 1, eType=gdal.GDT_Float32)
 
     # Set affine transformation coefficients from source raster
@@ -227,48 +230,120 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     dst_ds = None
 
 
-def check_projection(in_data:list):
+def check_projection(in_data: list):
     """
-    Check for existence of a defined projection
+    Check for existence of a defined projection in GTiff files
     """
 
-    # Open raster
     for ds in in_data:
-        check_ds = gdal.Open(ds)
 
-        # Check projection of source raster
-        prj = check_ds.GetProjection()
-        src_srs = osr.SpatialReference(wkt=prj)
-        epsg_code = src_srs.GetAttrValue('AUTHORITY', 1)
+        # Check if raster is asc
+        # Convert to lowercase
+        src = ds.lower()
+        if src.endswith(".asc"):
+            # Check is passed for asc files because asc files do not contain crs information.
+            pass
 
-        if src_srs is None:
-            raise ValueError('Spatial reference system is not defined')
+        # Check crs definition if data is GTiff
+        else:
+
+            # Open dataset
+            check_ds = gdal.Open(ds)
+
+            # Check projection of source raster
+            prj = check_ds.GetProjection()
+
+            if len(prj) == 0:
+                raise ValueError('Spatial reference system is not defined')
 
 def reproject(input_files_path:list):
     """
-    Reproject rasters to EPSG:3035
+    Reproject rasters to EPSG:3035. Set no data value to -99.0.
+    Source crs of asc files is assumed to be EPSG:25832.
+    Source crs of GTiff files is read from the data.
     """
 
     # List to hold list of reprojected rasters
     reprojectedlist = []
 
     for input in input_files_path:
-        # Get source file name
-        f_name = os.path.basename(input).split(".")[0]
 
-        # Create reprojected raster
-        out_tif = temp_dir + f_name + "_3035.tif"
+        # Check if raster is asc
+        # Convert to lowercase
+        src = input.lower()
+        if src.endswith(".asc"):
+            # Warp asc files to EPSG:3035 using EPSG:25832 as defined source crs
 
-        # Reproject rasters
-        gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=input, options=gdal.WarpOptions(format='GTiff', dstSRS='EPSG:3035', outputType=gdal.GDT_Float32, srcNodata=-99.0, dstNodata=-99.0))
+            # Get source file name
+            f_name = os.path.basename(input).split(".")[0]
 
-        # Add raster list to list of lists
-        reprojectedlist.append(out_tif)
+            # Create reprojected raster
+            out_tif = temp_dir + f_name + "_3035.tif"
 
-        # Close raster
-        out_tif = None
+            # Reproject rasters to EPSG:3035 in GTiff format, set data type
+            gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=input,
+                    options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
+                                            outputType=gdal.GDT_Float32))
 
-    return reprojectedlist
+            # Read existing no data value(s)
+            dst_ds = gdal.Open(out_tif, gdal.GA_Update)
+            ndv = dst_ds.GetRasterBand(1).GetNoDataValue()
+            newndv = -99.0
+            band1 = dst_ds.GetRasterBand(1).ReadAsArray()
+            band1[band1 == ndv] = newndv
+
+            # Set no data value for source rasters to -99.0
+            dst_ds.GetRasterBand(1).SetNoDataValue(newndv)
+            dst_ds.GetRasterBand(1).WriteArray(band1)
+            dst_ds = None
+
+            # Add raster list to list of lists
+            reprojectedlist.append(out_tif)
+
+            # Close raster
+            out_tif = None
+
+        else:
+            # File is GTiff
+            # Warp GTiff files to EPSG:3035 using dataset's defined crs as source crs
+
+            # Get source file name
+            f_name = os.path.basename(input).split(".")[0]
+
+            # Create reprojected raster
+            out_tif = temp_dir + f_name + "_3035.tif"
+
+            # Open dataset
+            check_ds = gdal.Open(input)
+
+            # Check projection of source raster
+            prj = check_ds.GetProjection()
+            src_srs = osr.SpatialReference(wkt=prj)
+
+            # Reproject rasters to EPSG:3035 in GTiff format, set data type
+            gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=input,
+                    options=gdal.WarpOptions(format='GTiff', srcSRS=src_srs, dstSRS='EPSG:3035',
+                                            outputType=gdal.GDT_Float32))
+
+            # Read existing no data value(s)
+            dst_ds = gdal.Open(out_tif, gdal.GA_Update)
+            ndv = dst_ds.GetRasterBand(1).GetNoDataValue()
+            newndv = -99.0
+            band1 = dst_ds.GetRasterBand(1).ReadAsArray()
+            band1[band1 == ndv] = newndv
+
+            # Set no data value for source rasters to -99.0
+            dst_ds.GetRasterBand(1).SetNoDataValue(newndv)
+            dst_ds.GetRasterBand(1).WriteArray(band1)
+            dst_ds = None
+
+            # Add raster list to list of lists
+            reprojectedlist.append(out_tif)
+
+            # Close raster
+            out_tif = None
+
+        return reprojectedlist
 
 def merge_rasters(input_files_path:list, out=None):
     """
@@ -332,7 +407,6 @@ def merge_rasters(input_files_path:list, out=None):
 def validate_source_format(srcData:list):
     """
     Check that the file extension of all input rasters is .asc or .tif.
-    Ensure all input files have the same no data value and data type.
     """
 
     # Check that the file extension of all input rasters is .asc or .tif
@@ -343,39 +417,6 @@ def validate_source_format(srcData:list):
             pass
         else:
             raise ValueError('File extension is not .asc or .tif')
-
-    # Create list to hold lists of translated rasters
-    out_ras = []
-
-    for srcDs in srcData:
-        # Ensure all input files have the same no data value and data type
-
-        # Get source file name
-        f_name = os.path.basename(srcDs).split(".")[0]
-
-        # Set translate options
-        to = gdal.TranslateOptions(format="GTiff", outputType=gdal.GDT_Float32)
-
-        # Convert files to tif with same data type and same no data value
-        out_tif = temp_dir + f_name + ".tif"
-        gdal.Translate(out_tif, srcDs, options=to)
-
-        # Read existing no data value(s)
-        dst_ds = gdal.Open(out_tif, gdal.GA_Update)
-        ndv = dst_ds.GetRasterBand(1).GetNoDataValue()
-        newndv = -99.0
-        band1 = dst_ds.GetRasterBand(1).ReadAsArray()
-        band1[band1 == ndv] = newndv
-
-        # Set no data value for source rasters to -99.0
-        dst_ds.GetRasterBand(1).SetNoDataValue(newndv)
-        dst_ds.GetRasterBand(1).WriteArray(band1)
-        dst_ds = None
-
-        # Add tifs with unified no data value to list
-        out_ras.append(out_tif)
-
-    return out_ras
 
 def set_nodata_value(in_ds):
     """
