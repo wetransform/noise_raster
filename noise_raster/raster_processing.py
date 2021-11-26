@@ -353,21 +353,6 @@ def validate_source_format(srcData:list):
         # Get source file name
         f_name = os.path.basename(srcDs).split(".")[0]
 
-        # Read all negative pixel values
-        # Open raster
-        n_pixels = gdal.Open(srcDs)
-
-        # Read raster
-        band = n_pixels.GetRasterBand(1).ReadAsArray()
-
-        # Loop pixel values in array and write negative values to file
-        for arr in band:
-            for pixel in arr:
-                if (pixel < -90) or (pixel == 0):
-                    # Start logging raster information to file
-                    logger.info('Raster dataset: {}'.format(str(srcDs)))
-                    logger.info('Pixel value: {}'.format(str(pixel)))
-
         # Set translate options
         to = gdal.TranslateOptions(format="GTiff", outputType=gdal.GDT_Float32)
 
