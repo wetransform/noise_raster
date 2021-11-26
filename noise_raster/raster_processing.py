@@ -58,24 +58,23 @@ def sum_sound_level_3D(sound_levels: np.array):
 
     return out
 
-def source_raster_list(folderpath, folderpath2=None, folderpath3=None):
+
+def source_raster_list(*folderpaths):
     """
-    Create list of list of rasters in each source folder
+    INPUT: paths to the raster files
+    OUTPUT: list of list of the raster files inside the folders
     """
-    rasterlist = [folderpath]
+    rasterlist = []
     out_rasterlist = []
 
-    if len(folderpath2) != 0:
-        rasterlist.append(folderpath2)
+    for path in folderpaths:
+        rasterlist.append(path)
 
-    if len(folderpath3) != 0:
-        rasterlist.append(folderpath3)
+    for path in rasterlist:
+        rasterfile = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
 
-    for l in rasterlist:
-        newl = [os.path.join(l, f) for f in os.listdir(l) if os.path.isfile(os.path.join(l, f))]
-
-        out_rasterlist.append(newl)
-
+        out_rasterlist.append(rasterfile)
+        print(out_rasterlist)
     return out_rasterlist
 
 def check_extent(extent_list:list):
