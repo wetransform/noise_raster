@@ -236,39 +236,38 @@ class NoiseRaster:
                 check_extent(raslist[2])
 
             # Check file extension of source data.
-            # Translate rasters to ensure all rasters have same data type and same no data value.
             if len(raslist) == 1:
-                outtrans = validate_source_format(raslist[0])
+                validate_source_format(raslist[0])
             elif len(raslist) == 2:
-                outtrans = validate_source_format(raslist[0])
-                outtrans2 = validate_source_format(raslist[1])
+                validate_source_format(raslist[0])
+                validate_source_format(raslist[1])
             else:
-                outtrans = validate_source_format(raslist[0])
-                outtrans2 = validate_source_format(raslist[1])
-                outtrans3 = validate_source_format(raslist[2])
+                validate_source_format(raslist[0])
+                validate_source_format(raslist[1])
+                validate_source_format(raslist[2])
 
-            # Check for existence of CRS definition of each input raster
+            # Check for existence of CRS definition of each GTiff input raster
             if len(raslist) == 1:
-                check_projection(outtrans)
+                check_projection(raslist[0])
             elif len(raslist) == 2:
-                check_projection(outtrans)
-                check_projection(outtrans2)
+                check_projection(raslist[0])
+                check_projection(raslist[1])
             else:
-                check_projection(outtrans)
-                check_projection(outtrans2)
-                check_projection(outtrans3)
+                check_projection(raslist[0])
+                check_projection(raslist[1])
+                check_projection(raslist[2])
 
             # Reproject rasters to EPSG: 3035
             if len(raslist) == 1:
-                reprojectlist = reproject(outtrans)
+                reprojectlist = reproject(raslist[0])
             elif len(raslist) == 2:
-                reprojectlist1 = reproject(outtrans)
-                reprojectlist2 = reproject(outtrans2)
+                reprojectlist1 = reproject(raslist[0])
+                reprojectlist2 = reproject(raslist[1])
                 reprojectlist = [reprojectlist1, reprojectlist2]
             else:
-                reprojectlist1 = reproject(outtrans)
-                reprojectlist2 = reproject(outtrans2)
-                reprojectlist3 = reproject(outtrans3)
+                reprojectlist1 = reproject(raslist[0])
+                reprojectlist2 = reproject(raslist[1])
+                reprojectlist3 = reproject(raslist[2])
                 reprojectlist = [reprojectlist1, reprojectlist2, reprojectlist3]
 
             # If more than one source path, run addition
@@ -287,7 +286,7 @@ class NoiseRaster:
                 # Call calculation function
                 data_out = sum_sound_level_3D(zeroData)
 
-                # Write energetically added array to raster in tif format
+                # Write energetically added array to raster in GTiff format
                 out_ras = self.dlg.mQgsFileWidget_outRas.filePath()
                 out_energetic_ras =create_raster(data_out, out_ras, mergedVRT)
 
