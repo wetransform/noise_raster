@@ -118,7 +118,7 @@ def build_virtual_raster(in_vrt:list):
 
 def create_zero_array(in_ds):
     """
-    Create masked array as input to energetic addition. Masked arrays handle no data values.
+    Create array as input to energetic addition.
     """
     # Open dataset
     ds = gdal.Open(in_ds)
@@ -130,7 +130,7 @@ def create_zero_array(in_ds):
 
     return zeroData
 
-def create_raster(sound_array, out_pth, merged_vrt):
+def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
     """
     Create raster based on energetically added array
     """
@@ -376,3 +376,23 @@ def validate_source_format(srcData:list):
         out_ras.append(out_tif)
 
     return out_ras
+
+def set_nodata_value(in_ds):
+    """
+    Check the existing no data value of raster.
+    Set no data value to -99.0
+    """
+
+    # Read existing no data value(s)
+    dst_ds = gdal.Open(in_ds, gdal.GA_Update)
+    ndv = dst_ds.GetRasterBand(1).GetNoDataValue()
+    newndv = -99.0
+    band1 = dst_ds.GetRasterBand(1).ReadAsArray()
+    band1[band1 == ndv] = newndv
+
+    # Set no data value for source rasters to -99.0
+    dst_ds.GetRasterBand(1).SetNoDataValue(newndv)
+    dst_ds.GetRasterBand(1).WriteArray(band1)
+    dst_ds = None
+
+    return in_ds
