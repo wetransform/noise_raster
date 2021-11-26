@@ -31,7 +31,7 @@ from os.path import isfile, join
 import numpy as np
 import sys
 
-from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_masked_array
+from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -224,6 +224,17 @@ class NoiseRaster:
             # Check for minimum of one file path
             raslist = source_raster_list(noisePths1, noisePths2, noisePths3)
 
+            # Check extent of each input raster
+            if len(raslist) == 1:
+                check_extent(raslist[0])
+            elif len(raslist) == 2:
+                check_extent(raslist[0])
+                check_extent(raslist[1])
+            else:
+                check_extent(raslist[0])
+                check_extent(raslist[1])
+                check_extent(raslist[2])
+
             # Check file extension of source data.
             # Translate rasters to ensure all rasters have same data type and same no data value.
             if len(raslist) == 1:
@@ -271,10 +282,10 @@ class NoiseRaster:
                 mergedVRT = build_virtual_raster(mergedlist)
 
                 # Create masked array for addition which accounts for no data values
-                maskedData = create_masked_array(mergedVRT)
+                zeroData = create_zero_array(mergedVRT)
 
                 # Call calculation function
-                data_out = sum_sound_level_3D(maskedData)
+                data_out = sum_sound_level_3D(zeroData)
 
                 # Write energetically added array to raster in tif format
                 out_ras = self.dlg.mQgsFileWidget_outRas.filePath()
