@@ -368,27 +368,12 @@ def validate_source_format(srcData:list):
                     logger.info('Raster dataset: {}'.format(str(srcDs)))
                     logger.info('Pixel value: {}'.format(str(pixel)))
 
-        # Set all negative pixel values to 0. Recommendation from https://gdal.org/programs/gdal_calc.html
-        out_calc = temp_dir + f_name + "calc.tif"
-
-        # Parameters for gdal raster calculator
-        alg_params = {
-            'BAND_A': 1,
-            'FORMULA': 'A*(A>0)',
-            'INPUT_A': srcDs,
-            'NO_DATA': 0,
-            'RTYPE': 5,
-            'OUTPUT': out_calc
-                    }
-        # Execute gdal raster calculator
-        result= processing.run('gdal:rastercalculator', alg_params)
-
         # Set translate options
         to = gdal.TranslateOptions(format="GTiff", outputType=gdal.GDT_Float32)
 
         # Convert files to tif with same data type and same no data value
         out_tif = temp_dir + f_name + ".tif"
-        gdal.Translate(out_tif, result['OUTPUT'], options=to)
+        gdal.Translate(out_tif, srcDs, options=to)
 
         # Read existing no data value(s)
         dst_ds = gdal.Open(out_tif, gdal.GA_Update)
