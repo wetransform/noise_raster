@@ -31,7 +31,7 @@ from os.path import isfile, join
 import numpy as np
 import sys
 
-from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array
+from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -291,12 +291,15 @@ class NoiseRaster:
                 out_ras = self.dlg.mQgsFileWidget_outRas.filePath()
                 out_energetic_ras =create_raster(data_out, out_ras, mergedVRT)
 
+                # Set no data value to -99.0
+                out_final_ras = set_nodata_value(out_energetic_ras)
+
                 # Get reclassification table
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize energetically added raster including all noise sources
                 out_poly = self.dlg.mQgsFileWidget_outShp.filePath()
-                vectorize(out_energetic_ras, out_poly, selectedTableIndex)
+                vectorize(out_final_ras, out_poly, selectedTableIndex)
 
             else:
 
