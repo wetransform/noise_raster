@@ -87,16 +87,16 @@ def check_extent(extent_list:list):
 
         # Get extent of raster
         xmin, xpixel, _, ymax, _, ypixel = check_extent.GetGeoTransform()
-        xmax = xmin + (xpixel / 2)
-        ymin = ymax + (abs(ypixel) / 2)
+        xmin_center = xmin + (xpixel / 2)
+        ymax_center = ymax + (abs(ypixel) / 2)
 
-        if (xmax % 100 != 0) or (ymin % 100 != 0):
+        if (abs(xmin_center % 100) < 0.001) or (abs(ymax_center % 100) < 0.001):
             # Get source file name
             f_name = os.path.basename(ds).split(".")[0]
             # Write file name and extent to logfile
-            logger.info('Filename: {}'.format(str(f_name)))
-            logger.info('Pixel value: {}'.format(str(xmax)))
-            logger.info('Pixel value: {}'.format(str(ymin)))
+            logger.info('CHECK EXTENT: Filename: {}'.format(str(f_name)))
+            logger.info('Pixel value: {}'.format(str(xmin_center)))
+            logger.info('Pixel value: {}'.format(str(ymax_center)))
         else:
             pass
 
@@ -193,9 +193,13 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     if selectedTableIndex == 0:
         # Lden
         selectedTable = [54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, 74.49999, 70, 74.5, '', 75]
-    else:
+    elif selectedTableIndex == 1:
         # Lnight
         selectedTable = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
+    else:
+        # Write to logfile
+        logger.info('RECLASSIFICATION TABLE WAS NOT SELECTED')
+        raise ValueError('Reclassification table not selected')
 
     # Reclassification output path
     out_reclass = temp_dir + 'reclass.tif'
@@ -253,6 +257,10 @@ def check_projection(in_data: list):
             prj = check_ds.GetProjection()
 
             if len(prj) == 0:
+                # Get source file name
+                f_name = os.path.basename(ds).split(".")[0]
+                # Write file name to logfile
+                logger.info('SPATIAL REFERENCE NOT DEFINED: Filename: {}'.format(str(f_name)))
                 raise ValueError('Spatial reference system is not defined')
 
 def reproject(input_files_path:list):
@@ -415,6 +423,10 @@ def validate_source_format(srcData:list):
         if (src.endswith(".asc")) or (src.endswith(".tif")):
             pass
         else:
+            # Get source file name
+            f_name = os.path.basename(srcDs).split(".")[0]
+            # Write file name to logfile
+            logger.info('EXTENSION NOT ASC OR TIF: Filename: {}'.format(str(f_name)))
             raise ValueError('File extension is not .asc or .tif')
 
 def set_nodata_value(in_ds):
