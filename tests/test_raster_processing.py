@@ -1,7 +1,11 @@
 import numpy as np
 import unittest
+import os
 
-from noise_raster.raster_processing_standalone import sum_sound_level_3D
+from noise_raster.raster_processing_standalone import sum_sound_level_3D, source_raster_list
+
+path_to_current_file = os.path.realpath(__file__)
+cd = os.path.dirname(path_to_current_file)
 
 
 def create_test_input_3D_array():
@@ -31,3 +35,20 @@ def test_sum_sound_level_3D():
     assert isinstance(output, np.ndarray)
     assert output.shape == input_shape[1:3]
     np.allclose(output,test_output_2D_array,equal_nan=False) #returns True if two arrays are element-wise equal within a tolerance (default=1e-05)
+
+
+def test_source_raster_list():
+    # Given
+    folderpath1 = os.path.join(cd, "resources", "folderpath1")
+    folderpath2 = os.path.join(cd, "resources", "folderpath2")
+    folderpath3 = os.path.join(cd, "resources", "folderpath3")
+
+    # When
+    out = source_raster_list(folderpath1, folderpath2, folderpath3)
+
+    # Then
+    assert isinstance(out, list)
+    assert len(out) == 3
+    assert len(out[0]) == 3
+    assert len(out[1]) == 1
+    assert len(out[2]) == 1

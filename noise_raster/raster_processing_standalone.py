@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def sum_sound_level_3D(sound_levels: np.array):
     """
@@ -28,3 +29,21 @@ def sum_sound_level_3D(sound_levels: np.array):
     out = 10 * np.log10(sum_pressures)
 
     return out
+
+def source_raster_list(*folderpaths):
+    """
+    INPUT: paths to the raster files
+    OUTPUT: list of list of the raster files inside the folders
+    """
+    rasterlist = []
+    out_rasterlist = []
+
+    for path in folderpaths:
+        rasterlist.append(path)
+
+    for path in rasterlist:
+         rasterfile = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+     
+         out_rasterlist.append(rasterfile)
+         print(out_rasterlist)
+    return out_rasterlist 
