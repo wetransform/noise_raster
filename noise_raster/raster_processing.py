@@ -68,13 +68,14 @@ def source_raster_list(*folderpaths):
     out_rasterlist = []
 
     for path in folderpaths:
-        rasterlist.append(path)
+        if len(path) != 0:
+            rasterlist.append(path)
 
     for path in rasterlist:
         rasterfile = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
 
         out_rasterlist.append(rasterfile)
-        print(out_rasterlist)
+        
     return out_rasterlist
 
 def check_extent(extent_list:list):
