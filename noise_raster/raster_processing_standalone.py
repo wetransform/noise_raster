@@ -1,4 +1,5 @@
 import numpy as np
+from osgeo import gdal
 import os
 
 def sum_sound_level_3D(sound_levels: np.array):
@@ -30,6 +31,7 @@ def sum_sound_level_3D(sound_levels: np.array):
 
     return out
 
+
 def source_raster_list(*folderpaths):
     """
     INPUT: paths to the raster files
@@ -42,8 +44,28 @@ def source_raster_list(*folderpaths):
         rasterlist.append(path)
 
     for path in rasterlist:
-         rasterfile = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-     
-         out_rasterlist.append(rasterfile)
-         print(out_rasterlist)
-    return out_rasterlist 
+        rasterfile = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        out_rasterlist.append(rasterfile)
+
+    return out_rasterlist
+
+def check_extent(extent_list:list):
+    """
+    Check extent of each raster is divisible by 100
+    """
+    for ds in extent_list:
+        # Open dataset
+        check_extent = gdal.Open(ds)
+
+        # Get extent of raster - 1
+        xmin, xpixel, _, ymax, _, ypixel = check_extent.GetGeoTransform()
+        xmax = xmin + (xpixel / 2)
+        print('first solution')
+        print (xmin, xpixel)
+        print(xmax,ymax)
+
+        # Get extent of raster - 2
+        y_max = ymax
+        x_max = xmin + xpixel * check_extent.RasterXSize
+        print('second solution')
+        print(x_max, y_max)

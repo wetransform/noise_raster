@@ -2,7 +2,7 @@ import numpy as np
 import unittest
 import os
 
-from noise_raster.raster_processing_standalone import sum_sound_level_3D, source_raster_list
+from noise_raster.raster_processing_standalone import sum_sound_level_3D, source_raster_list, check_extent
 
 path_to_current_file = os.path.realpath(__file__)
 cd = os.path.dirname(path_to_current_file)
@@ -52,3 +52,15 @@ def test_source_raster_list():
     assert len(out[0]) == 3
     assert len(out[1]) == 1
     assert len(out[2]) == 1
+
+
+def test_check_extent():
+    # Given
+    testfilepath = 'https://storage.googleapis.com/gcp-public-data-landsat/LC08/01/042/034/LC08_L1TP_042034_20170616_20170629_01_T1/LC08_L1TP_042034_20170616_20170629_01_T1_B4.TIF'
+    print(testfilepath)
+    # When
+    out = check_extent([testfilepath])
+
+    # Then
+# #  #   assert out
+
