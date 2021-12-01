@@ -351,7 +351,7 @@ def reproject(input_files_path:list):
             # Close raster
             out_tif = None
 
-        return reprojectedlist
+    return reprojectedlist
 
 def merge_rasters(input_files_path:list, out=None):
     """
