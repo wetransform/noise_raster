@@ -260,6 +260,7 @@ class NoiseRaster:
             # Reproject rasters to EPSG: 3035
             if len(raslist) == 1:
                 reprojectlist = reproject(raslist[0])
+                reprojectlist = [reprojectlist]
             elif len(raslist) == 2:
                 reprojectlist1 = reproject(raslist[0])
                 reprojectlist2 = reproject(raslist[1])
