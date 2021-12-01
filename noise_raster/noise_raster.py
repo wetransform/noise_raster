@@ -272,7 +272,7 @@ class NoiseRaster:
 
             # If more than one source path, run addition
             # If only one source path, skip addition and run vectoriziation
-            if len(raslist) != 0:
+            if len(raslist) != 1:
 
                 # Merge all input noise rasters
                 mergedlist = merge_rasters(reprojectlist)
