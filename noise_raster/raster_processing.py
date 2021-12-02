@@ -361,7 +361,7 @@ def merge_rasters(input_files_path:list, out=None):
     # Create list of merged rasters
     merged_ras = []
 
-    if len(input_files_path) != 0:
+    if len(input_files_path) > 1:
         counter = 1
 
         for input in input_files_path:
@@ -399,7 +399,7 @@ def merge_rasters(input_files_path:list, out=None):
         out_vrt = temp_dir + "_3035.vrt"
 
         # Set vrt options
-        gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:3035', srcNodata=-99.0)
+        gdal.BuildVRT(out_vrt, input_files_path[0], resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:3035', srcNodata=-99.0)
 
         # Set translate options
         to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:3035", noData=-99.0, outputType=gdal.GDT_Float32)
