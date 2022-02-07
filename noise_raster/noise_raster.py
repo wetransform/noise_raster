@@ -201,13 +201,11 @@ class NoiseRaster:
         lineEdit1 = self.dlg.mQgsFileWidget_1.lineEdit()
         lineEdit2 = self.dlg.mQgsFileWidget_2.lineEdit()
         lineEdit3 = self.dlg.mQgsFileWidget_3.lineEdit()
-        lineEdit4 = self.dlg.mQgsFileWidget_outShp.lineEdit()
-        lineEdit5 = self.dlg.mQgsFileWidget_outRas.lineEdit()
+        lineEdit4 = self.dlg.mQgsFileWidget_out.lineEdit()
         lineEdit1.clear()
         lineEdit2.clear()
         lineEdit3.clear()
         lineEdit4.clear()
-        lineEdit5.clear()
 
         # show the dialog
         self.dlg.show()
@@ -288,8 +286,8 @@ class NoiseRaster:
                 data_out = sum_sound_level_3D(zeroData)
 
                 # Write energetically added array to raster in GTiff format
-                out_ras = self.dlg.mQgsFileWidget_outRas.filePath()
-                out_energetic_ras =create_raster(data_out, out_ras, mergedVRT)
+                out_ras = self.dlg.mQgsFileWidget_out.filePath()
+                out_energetic_ras = create_raster(data_out, out_ras, mergedVRT)
 
                 # Set no data value to -99.0
                 out_final_ras = set_nodata_value(out_energetic_ras)
@@ -298,13 +296,13 @@ class NoiseRaster:
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize energetically added raster including all noise sources
-                out_poly = self.dlg.mQgsFileWidget_outShp.filePath()
+                out_poly = self.dlg.mQgsFileWidget_out.filePath()
                 vectorize(out_final_ras, out_poly, selectedTableIndex)
 
             else:
 
                 # Write raster in tif format to selected file path
-                out_ras = self.dlg.mQgsFileWidget_outRas.filePath()
+                out_ras = self.dlg.mQgsFileWidget_out.filePath()
 
                 # Merge all input rasters for a single noise source
                 merge_rasters(reprojectlist, out_ras)
@@ -313,20 +311,20 @@ class NoiseRaster:
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize raster
-                out_poly = self.dlg.mQgsFileWidget_outShp.filePath()
+                out_poly = self.dlg.mQgsFileWidget_out.filePath()
                 vectorize(out_ras, out_poly, selectedTableIndex)
 
             pass
 
             # Load raster layer in QGIS
-            f_name_ras = os.path.basename(out_ras).split(".")[0]
-            self.iface.addRasterLayer(out_ras, f_name_ras)
+            ras_layer = os.path.join(out_ras, 'out.tif')
+            self.iface.addRasterLayer(ras_layer, "out")
 
             # Load vector layer in QGIS
-            f_name_poly = os.path.basename(out_poly).split(".")[0]
-            self.iface.addVectorLayer(out_poly, f_name_poly, "ogr")
+            poly_layer = os.path.join(out_poly, 'out.shp')
+            self.iface.addVectorLayer(poly_layer, "out", "ogr")
 
             # Display success message bar in QGIS
             self.iface.messageBar().pushMessage(
-                "Success", "Output file written at " + f_name_poly,
+                "Success", "Output file written at " + poly_layer,
                 level=3, duration=3)
