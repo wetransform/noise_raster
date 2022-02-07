@@ -9,18 +9,25 @@ from osgeo import gdal, ogr, osr
 from qgis.core import QgsRasterLayer, QgsProcessing
 import sys
 import os
+import shutil
 import processing
 import tempfile
 import subprocess
 import numpy as np
 import logging
-import time
+from datetime import datetime
 
 # Get current temp directory
 
 cur_temp_dir = tempfile.gettempdir()
 rep_temp_dir = cur_temp_dir.replace(os.sep, '/')
-temp_dir = rep_temp_dir + "/"
+# Get current date and time
+DATETIME = datetime.now()
+# Convert date, time to string in format: dd_mm_YY_H_M_S
+DATETIME_str = DATETIME.strftime("%d_%m_%Y_%H_%M_%S")
+# Create sub directory named 'noise_<current date and time>' in temp folder to collect intermediate files
+os.makedirs(rep_temp_dir + "/noise_" + DATETIME_str)
+temp_dir = rep_temp_dir + "/noise_" + DATETIME_str + "/"
 
 # Initiate logging
 
@@ -236,6 +243,9 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     check_ds = None
     dst_ds = None
 
+    # Delete temp sub directory
+    temp_dir_pth = rep_temp_dir + "/noise_" + DATETIME_str
+    shutil.rmtree(temp_dir_pth)
 
 def check_projection(in_data: list):
     """
