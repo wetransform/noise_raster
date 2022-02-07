@@ -209,8 +209,8 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     alg_params = {
         'DATA_TYPE': 5,
         'INPUT_RASTER': in_ds,
-        'NODATA_FOR_MISSING': False,
-        'NO_DATA': -99.0,
+        'NODATA_FOR_MISSING': True,
+        'NO_DATA': 0,
         'RANGE_BOUNDARIES': 2,
         'RASTER_BAND': 1,
         'TABLE': selectedTable,
@@ -227,7 +227,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     band1 = check_ds.GetRasterBand(1)
 
     # Vectorize reclassified raster to create polygon noise contours
-    gdal.Polygonize(srcBand=band1, maskBand=None, outLayer=dst_layer, iPixValField=0)
+    gdal.Polygonize(srcBand=band1, maskBand=band1, outLayer=dst_layer, iPixValField=0)
 
     # Close dataset
     check_ds = None
