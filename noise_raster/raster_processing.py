@@ -135,6 +135,9 @@ def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
     Create raster based on energetically added array
     """
 
+    # Add tif name and file extension to directory file path
+    out_pth_ext = os.path.join(out_pth, 'out.tif')
+
     # Get geotranform of merged_vrt
     ds = gdal.Open(merged_vrt)
     geotransform = ds.GetGeoTransform()
@@ -145,10 +148,7 @@ def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
 
     # Create the output raster
     driver = gdal.GetDriverByName("GTiff")
-    # Delete existing raster if file already exists
-    if os.path.exists(out_pth):
-        driver.DeleteDataSource(out_pth)
-    dsOut = driver.Create(out_pth, cols, rows, 1, eType=gdal.GDT_Float32)
+    dsOut = driver.Create(out_pth_ext, cols, rows, 1, eType=gdal.GDT_Float32)
 
     # Set affine transformation coefficients from source raster
     dsOut.SetGeoTransform(geotransform)
@@ -162,17 +162,20 @@ def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
     outRasterSRS.ImportFromEPSG(3035)
     dsOut.SetProjection(outRasterSRS.ExportToWkt())
 
-    return out_pth
+    return out_pth_ext
 
     # Close the datasets
     dsOut = None
-    out_pth = None
+    out_pth_ext = None
 
 def vectorize(in_ds, out_poly, selectedTableIndex):
     """
     Reclassify raster.
     Convert reclassified raster to polygon.
     """
+
+    # Add shp name and file extension to directory path
+    out_poly_pth = os.path.join(out_poly, 'out.shp')
 
     # Set destination SRS of target shapefile
     dest_srs = osr.SpatialReference()
@@ -181,10 +184,10 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     # Create shapefile
     drv = ogr.GetDriverByName("ESRI Shapefile")
     # Delete existing shapefile if file already exists
-    if os.path.exists(out_poly):
-        drv.DeleteDataSource(out_poly)
-    dst_ds = drv.CreateDataSource(out_poly)
-    dst_layer = dst_ds.CreateLayer(out_poly, dest_srs, geom_type=ogr.wkbPolygon)
+    if os.path.exists(out_poly_pth):
+        drv.DeleteDataSource(out_poly_pth)
+    dst_ds = drv.CreateDataSource(out_poly_pth)
+    dst_layer = dst_ds.CreateLayer(out_poly_pth, dest_srs, geom_type=ogr.wkbPolygon)
 
     # Add field to shapefile
     noise_field = ogr.FieldDefn('Noise', ogr.OFTReal)
@@ -404,11 +407,15 @@ def merge_rasters(input_files_path:list, out=None):
         # Set translate options
         to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:3035", noData=-99.0, outputType=gdal.GDT_Float32)
 
+        # Add tif name and file extension to directory path
+        out_pth_ext = os.path.join(out, 'out.tif')
+
         # Convert vrt file to tif
-        gdal.Translate(out, out_vrt, options=to)
+        gdal.Translate(out_pth_ext, out_vrt, options=to)
 
         # Close raster
         out_vrt = None
+        out_pth_ext = None
 
     return merged_ras
 
