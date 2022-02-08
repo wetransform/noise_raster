@@ -137,13 +137,13 @@ def create_zero_array(in_ds):
 
     return zeroData
 
-def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
+def create_raster(sound_array:np.ndarray, merged_vrt):
     """
     Create raster based on energetically added array
     """
 
     # Add tif name and file extension to directory file path
-    out_pth_ext = os.path.join(out_pth, 'out.tif')
+    out_pth_ext = temp_dir + 'energetic.tif'
 
     # Get geotranform of merged_vrt
     ds = gdal.Open(merged_vrt)
@@ -166,7 +166,7 @@ def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
 
     # Set the crs of output raster
     outRasterSRS = osr.SpatialReference()
-    outRasterSRS.ImportFromEPSG(3035)
+    outRasterSRS.ImportFromEPSG(25832)
     dsOut.SetProjection(outRasterSRS.ExportToWkt())
 
     return out_pth_ext
@@ -178,7 +178,8 @@ def create_raster(sound_array:np.ndarray, out_pth, merged_vrt):
 def vectorize(in_ds, out_poly, selectedTableIndex):
     """
     Reclassify raster.
-    Convert reclassified raster to polygon.
+    Warp reclassified raster to EPSG:3035.
+    Convert reclassified raster to polygon in EPSG:3035.
     """
 
     # Add shp name and file extension to directory path
@@ -230,8 +231,16 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     # Reclassify raster
     result = processing.run('native:reclassifybytable', alg_params)
 
+    # Reprojected reclassified raster
+    out_tif = temp_dir + "reclass_3035.tif"
+
+    # Reproject reclassified raster to EPSG:3035 in GTiff format. Polygon will be generated in EPSG:3035.
+    gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=result['OUTPUT'],
+              options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
+                                       outputType=gdal.GDT_Float32))
+
     # Open reclassified raster
-    check_ds = gdal.Open(result['OUTPUT'])
+    check_ds = gdal.Open(out_tif)
 
     # Get reclassified raster band
     band1 = check_ds.GetRasterBand(1)
@@ -243,9 +252,6 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     check_ds = None
     dst_ds = None
 
-    # Delete temp sub directory
-    temp_dir_pth = rep_temp_dir + "/noise_" + DATETIME_str
-    shutil.rmtree(temp_dir_pth)
 
 def check_projection(in_data: list):
     """
@@ -279,9 +285,9 @@ def check_projection(in_data: list):
 
 def reproject(input_files_path:list):
     """
-    Reproject rasters to EPSG:3035. Set no data value to -99.0.
-    Source crs of asc files is assumed to be EPSG:25832.
-    Source crs of GTiff files is read from the data.
+    Reproject tifs to EPSG:25832. Source crs of GTiff files is read from the data.
+    Translate asc files to tifs. Source crs of asc files is assumed to be EPSG:25832.
+    Set no data value to -99.0.
     """
 
     # List to hold list of reprojected rasters
@@ -293,18 +299,19 @@ def reproject(input_files_path:list):
         # Convert to lowercase
         src = input.lower()
         if src.endswith(".asc"):
-            # Warp asc files to EPSG:3035 using EPSG:25832 as defined source crs
+            # Translate asc files to tif using EPSG:25832 as defined source crs
 
             # Get source file name
             f_name = os.path.basename(input).split(".")[0]
 
-            # Create reprojected raster
-            out_tif = temp_dir + f_name + "_3035.tif"
+            # Create tif raster
+            out_tif = temp_dir + f_name + "_25832.tif"
 
-            # Reproject rasters to EPSG:3035 in GTiff format, set data type
-            gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=input,
-                    options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
-                                            outputType=gdal.GDT_Float32))
+            # Set translate options
+            to = gdal.TranslateOptions(format="GTiff", outputSRS='EPSG:25832', outputType=gdal.GDT_Float32)
+
+            # Convert vrt file to tif
+            gdal.Translate(out_tif, input, options=to)
 
             # Read existing no data value(s)
             dst_ds = gdal.Open(out_tif, gdal.GA_Update)
@@ -326,13 +333,13 @@ def reproject(input_files_path:list):
 
         else:
             # File is GTiff
-            # Warp GTiff files to EPSG:3035 using dataset's defined crs as source crs
+            # Warp GTiff using dataset's defined crs as source crs
 
             # Get source file name
             f_name = os.path.basename(input).split(".")[0]
 
             # Create reprojected raster
-            out_tif = temp_dir + f_name + "_3035.tif"
+            out_tif = temp_dir + f_name + "_25832.tif"
 
             # Open dataset
             check_ds = gdal.Open(input)
@@ -341,9 +348,9 @@ def reproject(input_files_path:list):
             prj = check_ds.GetProjection()
             src_srs = osr.SpatialReference(wkt=prj)
 
-            # Reproject rasters to EPSG:3035 in GTiff format, set data type
+            # Reproject rasters to EPSG:25832 in GTiff format, set data type
             gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=input,
-                    options=gdal.WarpOptions(format='GTiff', srcSRS=src_srs, dstSRS='EPSG:3035',
+                    options=gdal.WarpOptions(format='GTiff', srcSRS=src_srs, dstSRS='EPSG:25832',
                                             outputType=gdal.GDT_Float32))
 
             # Read existing no data value(s)
@@ -366,9 +373,9 @@ def reproject(input_files_path:list):
 
     return reprojectedlist
 
-def merge_rasters(input_files_path:list, out=None):
+def merge_rasters(input_files_path:list):
     """
-    Merge each list of rasters into a single raster
+    Merge lists of rasters into a single raster or merge a single list of rasters to a single raster.
     """
 
     # Create list of merged rasters
@@ -380,16 +387,16 @@ def merge_rasters(input_files_path:list, out=None):
         for input in input_files_path:
 
             # Create merged vrt
-            out_vrt = temp_dir + str(counter) + "_3035.vrt"
+            out_vrt = temp_dir + str(counter) + "_25832.vrt"
 
             # Create converted tif
-            out_tif = temp_dir + str(counter) + "_3035.tif"
+            out_tif = temp_dir + str(counter) + "_25832.tif"
 
             # Set vrt options
-            gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:3035', srcNodata=-99.0)
+            gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0)
 
             # Set translate options
-            to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:3035", noData=-99.0, outputType=gdal.GDT_Float32)
+            to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32)
 
             # Convert vrt file to tif
             gdal.Translate(out_tif, out_vrt, options=to)
@@ -399,9 +406,12 @@ def merge_rasters(input_files_path:list, out=None):
 
             # Close raster
             out_vrt = None
+            out_tif = None
 
             # Add 1 to counter
             counter += 1
+
+        return merged_ras
 
     else:
         """
@@ -409,25 +419,26 @@ def merge_rasters(input_files_path:list, out=None):
         """
 
         # Create merged vrt
-        out_vrt = temp_dir + "_3035.vrt"
+        out_vrt = temp_dir + "singleList_25832.vrt"
 
         # Set vrt options
-        gdal.BuildVRT(out_vrt, input_files_path[0], resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:3035', srcNodata=-99.0)
+        gdal.BuildVRT(out_vrt, input_files_path[0], resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0)
 
         # Set translate options
-        to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:3035", noData=-99.0, outputType=gdal.GDT_Float32)
+        to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32)
 
-        # Add tif name and file extension to directory path
-        out_pth_ext = os.path.join(out, 'out.tif')
+        # Create converted tif
+        out_tif = temp_dir + "singleList_25832.tif"
 
         # Convert vrt file to tif
-        gdal.Translate(out_pth_ext, out_vrt, options=to)
+        gdal.Translate(out_tif, out_vrt, options=to)
+
+        return out_tif
 
         # Close raster
         out_vrt = None
-        out_pth_ext = None
+        out_tif = None
 
-    return merged_ras
 
 def validate_source_format(srcData:list):
     """
@@ -463,6 +474,29 @@ def set_nodata_value(in_ds):
     # Set no data value for source rasters to -99.0
     dst_ds.GetRasterBand(1).SetNoDataValue(newndv)
     dst_ds.GetRasterBand(1).WriteArray(band1)
-    dst_ds = None
 
     return in_ds
+
+    dst_ds = None
+    in_ds = None
+
+def reproject_3035(in_ras, out_ras):
+    """
+    Reproject the final output raster to EPSG:3035.
+    """
+
+    # Add reprojected tif name and file extension to directory file path
+    out_pth_ext = os.path.join(out_ras, 'final_3035.tif')
+
+    # Reproject
+    gdal.Warp(destNameOrDestDS=out_pth_ext, srcDSOrSrcDSTab=in_ras,
+              options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
+                                       outputType=gdal.GDT_Float32))
+
+    return out_pth_ext
+
+    out_pth_ext = None
+
+    # Delete temp sub directory
+    temp_dir_pth = rep_temp_dir + "/noise_" + DATETIME_str
+    shutil.rmtree(temp_dir_pth)
