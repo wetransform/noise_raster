@@ -31,7 +31,7 @@ from os.path import isfile, join
 import numpy as np
 import sys
 
-from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value
+from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value, reproject_3035
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -287,7 +287,7 @@ class NoiseRaster:
 
                 # Write energetically added array to raster in GTiff format
                 out_ras = self.dlg.mQgsFileWidget_out.filePath()
-                out_energetic_ras = create_raster(data_out, out_ras, mergedVRT)
+                out_energetic_ras = create_raster(data_out, mergedVRT)
 
                 # Set no data value to -99.0
                 out_final_ras = set_nodata_value(out_energetic_ras)
@@ -299,25 +299,31 @@ class NoiseRaster:
                 out_poly = self.dlg.mQgsFileWidget_out.filePath()
                 vectorize(out_final_ras, out_poly, selectedTableIndex)
 
+                # Reproject energetically added raster to EPSG:3035
+                reproject_3035(out_final_ras, out_ras)
+
             else:
 
                 # Write raster in tif format to selected file path
                 out_ras = self.dlg.mQgsFileWidget_out.filePath()
 
                 # Merge all input rasters for a single noise source
-                merge_rasters(reprojectlist, out_ras)
+                out_merged_ras = merge_rasters(reprojectlist)
 
                 # Get reclassification table
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize raster
                 out_poly = self.dlg.mQgsFileWidget_out.filePath()
-                vectorize(out_ras, out_poly, selectedTableIndex)
+                vectorize(out_merged_ras, out_poly, selectedTableIndex)
+
+                # Reproject raster to EPSG:3035
+                reproject_3035(out_merged_ras, out_ras)
 
             pass
 
             # Load raster layer in QGIS
-            ras_layer = os.path.join(out_ras, 'out.tif')
+            ras_layer = os.path.join(out_ras, 'final_3035.tif')
             self.iface.addRasterLayer(ras_layer, "out")
 
             # Load vector layer in QGIS
