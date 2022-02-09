@@ -36,6 +36,19 @@ formatter = '%(levelname)s: %(asctime)s - %(name)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=formatter, filename=logfile) #stream=sys.stdout if stdout, not stderr
 logger = logging.getLogger("noise_raster_v1")
 
+# Reclassification tables
+"""
+The selected table values are required input for the "Reclassify by Table" operation. The user selects "Lden" or "Lnight" in the user interface of the tool. 
+"Lden" categories are used for daytime noise and "Lnight" are used for night time noise. These value ranges are standards used in noise mapping. 
+The input raster is reclassified so that each raster cell gets the same value if it's cell value falls into one of the given ranges. 
+This pre-processing step dramatically improves the performance of the vectorization process.
+"""
+# Lden
+selectedTableLden = [54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, 74.49999, 70, 74.5, '', 75]
+
+# Lnight
+selectedTableLnight = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
+
 def sum_sound_level_3D(sound_levels: np.array):
     """
     INPUT: array of dimension (m,n,l) - stack of sound levels on a 2D map
@@ -165,6 +178,7 @@ def create_raster(sound_array:np.ndarray, merged_vrt):
     dsOut.GetRasterBand(1).SetNoDataValue(0)
 
     # Set the crs of output raster
+    # TODO Make configurable to support sources with other reference systems
     outRasterSRS = osr.SpatialReference()
     outRasterSRS.ImportFromEPSG(25832)
     dsOut.SetProjection(outRasterSRS.ExportToWkt())
@@ -204,10 +218,10 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     # Apply selected reclassification values from combobox
     if selectedTableIndex == 0:
         # Lden
-        selectedTable = [54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, 74.49999, 70, 74.5, '', 75]
+        selectedTable = selectedTableLden
     elif selectedTableIndex == 1:
         # Lnight
-        selectedTable = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
+        selectedTable = selectedTableLnight
     else:
         # Write to logfile
         logger.info('RECLASSIFICATION TABLE WAS NOT SELECTED')
@@ -217,6 +231,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     out_reclass = temp_dir + 'reclass.tif'
 
     # Set reclassify algorithm parameters
+    # MISSING values that do not fall in the lden and lnight value ranges are classified as No Data and given a value of 0
     alg_params = {
         'DATA_TYPE': 5,
         'INPUT_RASTER': in_ds,
@@ -246,6 +261,12 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     band1 = check_ds.GetRasterBand(1)
 
     # Vectorize reclassified raster to create polygon noise contours
+    """
+    Values that fall outside of the lden and lnight value ranges should not be carried over into the shapefile polygon that is created. 
+    In order to remove these values, the no data value is set to 0 for the reclassified raster and then the raster itself is used as the raster mask 
+    (instead of creating a separate raster mask file). When calling Polygonize, setting the maskBand parameter to the raster itself 
+    removes the no data values identified as 0 from the polygon that is created.
+    """
     gdal.Polygonize(srcBand=band1, maskBand=band1, outLayer=dst_layer, iPixValField=0)
 
     # Close dataset
@@ -483,6 +504,7 @@ def set_nodata_value(in_ds):
 def reproject_3035(in_ras, out_ras):
     """
     Reproject the final output raster to EPSG:3035.
+    Delete sub directory of temporary files.
     """
 
     # Add reprojected tif name and file extension to directory file path
