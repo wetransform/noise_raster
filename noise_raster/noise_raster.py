@@ -233,7 +233,7 @@ class NoiseRaster:
                 check_extent(raslist[1])
                 check_extent(raslist[2])
 
-            # Check file extension of source data.
+            # Check file extension of source data. Must be asc or tif.
             if len(raslist) == 1:
                 validate_source_format(raslist[0])
             elif len(raslist) == 2:
@@ -244,7 +244,7 @@ class NoiseRaster:
                 validate_source_format(raslist[1])
                 validate_source_format(raslist[2])
 
-            # Check for existence of CRS definition of each GTiff input raster
+            # Check for existence of CRS definition of each GTiff input raster. asc is assumed to be EPSG:25832.
             if len(raslist) == 1:
                 check_projection(raslist[0])
             elif len(raslist) == 2:
@@ -255,7 +255,7 @@ class NoiseRaster:
                 check_projection(raslist[1])
                 check_projection(raslist[2])
 
-            # Reproject rasters to EPSG: 3035
+            # Reproject tifs to EPSG:25832 translate ascs to tifs.
             if len(raslist) == 1:
                 reprojectlist = reproject(raslist[0])
                 reprojectlist = [reprojectlist]
@@ -270,10 +270,10 @@ class NoiseRaster:
                 reprojectlist = [reprojectlist1, reprojectlist2, reprojectlist3]
 
             # If more than one source path, run addition
-            # If only one source path, skip addition and run vectoriziation
+            # If only one source path, skip addition and run vectorization
             if len(raslist) > 1:
 
-                # Merge all input noise rasters
+                # Merge all input noise rasters in each list to create one merged raster, per list
                 mergedlist = merge_rasters(reprojectlist)
 
                 # Create merged virtual raster with multiple bands for addition
@@ -322,11 +322,11 @@ class NoiseRaster:
 
             pass
 
-            # Load raster layer in QGIS
+            # Load raster layer created by the reproject_3035 function in QGIS
             ras_layer = os.path.join(out_ras, 'final_3035.tif')
             self.iface.addRasterLayer(ras_layer, "out")
 
-            # Load vector layer in QGIS
+            # Load vector layer created by the vectorize function in QGIS
             poly_layer = os.path.join(out_poly, 'out.shp')
             self.iface.addVectorLayer(poly_layer, "out", "ogr")
 
