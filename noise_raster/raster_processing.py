@@ -68,15 +68,16 @@ def sum_sound_level_3D(sound_levels: np.array):
 
     l, m, n = sound_levels.shape
 
-    sound_pressures = np.zeros((l, m, n))
-    sum_pressures = np.zeros((l, m, n))
-    out = np.zeros((l, m, n))
+    sound_pressures = np.zeros((l, m, n)).astype('float32')
+    sum_pressures = np.zeros((l, m, n)).astype('float32')
+    out = np.zeros((l, m, n)).astype('float32')
 
     sound_pressures = np.power(10, 0.1 * sound_levels)
     sum_pressures = np.sum(sound_pressures, axis=0)
     out = 10 * np.log10(sum_pressures)
+    rounded_out = out.round(decimals=1)
 
-    return out
+    return rounded_out
 
 
 def source_raster_list(*folderpaths):
