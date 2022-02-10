@@ -191,9 +191,9 @@ def create_raster(sound_array:np.ndarray, merged_vrt):
 
 def vectorize(in_ds, out_poly, selectedTableIndex):
     """
-    Reclassify raster.
-    Warp reclassified raster to EPSG:3035.
-    Convert reclassified raster to polygon in EPSG:3035.
+    Create polygon for vectorization. Reclassify source input raster.
+    Vectorize reclassified raster.
+    Reproject polygon to EPSG:3035.
     """
 
     # Add shp name and file extension to directory path
@@ -201,7 +201,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
 
     # Set destination SRS of target shapefile
     dest_srs = osr.SpatialReference()
-    dest_srs.ImportFromEPSG(3035)
+    dest_srs.ImportFromEPSG(25832)
 
     # Create shapefile
     drv = ogr.GetDriverByName("ESRI Shapefile")
@@ -246,16 +246,8 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     # Reclassify raster
     result = processing.run('native:reclassifybytable', alg_params)
 
-    # Reprojected reclassified raster
-    out_tif = temp_dir + "reclass_3035.tif"
-
-    # Reproject reclassified raster to EPSG:3035 in GTiff format. Polygon will be generated in EPSG:3035.
-    gdal.Warp(destNameOrDestDS=out_tif, srcDSOrSrcDSTab=result['OUTPUT'],
-              options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
-                                       outputType=gdal.GDT_Float32))
-
     # Open reclassified raster
-    check_ds = gdal.Open(out_tif)
+    check_ds = gdal.Open(result['OUTPUT'])
 
     # Get reclassified raster band
     band1 = check_ds.GetRasterBand(1)
@@ -272,6 +264,23 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     # Close dataset
     check_ds = None
     dst_ds = None
+
+    # Reproject polygon to EPSG:3035
+    out_poly_rprj = os.path.join(out_poly, 'out_3035.shp')
+
+    # Set reprojection parameters
+
+    alg_params_shp = {
+        'INPUT': out_poly_pth,
+        'TARGET_CRS': 'EPSG:3035',
+        'OUTPUT': out_poly_rprj
+    }
+
+    # Reproject polygon
+    processing.run('native:reprojectlayer', alg_params_shp)
+
+    # Close dataset
+    out_poly_rprj = None
 
 
 def check_projection(in_data: list):
@@ -331,7 +340,7 @@ def reproject(input_files_path:list):
             # Set translate options
             to = gdal.TranslateOptions(format="GTiff", outputSRS='EPSG:25832', outputType=gdal.GDT_Float32)
 
-            # Convert vrt file to tif
+            # Convert asc file to tif
             gdal.Translate(out_tif, input, options=to)
 
             # Read existing no data value(s)
