@@ -31,7 +31,7 @@ from os.path import isfile, join
 import numpy as np
 import sys
 
-from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value, reproject_3035
+from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value, reproject_3035, delete_temp_directory
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -321,6 +321,9 @@ class NoiseRaster:
                 reproject_3035(out_merged_ras, out_ras)
 
             pass
+
+            # Delete temporary sub directory containing intermediate files created
+            delete_temp_directory()
 
             # Load raster layer created by the reproject_3035 function in QGIS
             ras_layer = os.path.join(out_ras, 'final_3035.tif')

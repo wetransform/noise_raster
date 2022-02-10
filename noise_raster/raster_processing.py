@@ -514,7 +514,6 @@ def set_nodata_value(in_ds):
 def reproject_3035(in_ras, out_ras):
     """
     Reproject the final output raster to EPSG:3035.
-    Delete sub directory of temporary files.
     """
 
     # Add reprojected tif name and file extension to directory file path
@@ -528,6 +527,11 @@ def reproject_3035(in_ras, out_ras):
     return out_pth_ext
 
     out_pth_ext = None
+
+def delete_temp_directory():
+    """
+    Delete the temporary sub-directory containing all intermediate files created.
+    """
 
     # Delete temp sub directory
     temp_dir_pth = rep_temp_dir + "/noise_" + DATETIME_str
