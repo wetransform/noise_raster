@@ -31,7 +31,7 @@ from os.path import isfile, join
 import numpy as np
 import sys
 
-from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value
+from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value, reproject_3035, delete_temp_directory
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -201,13 +201,11 @@ class NoiseRaster:
         lineEdit1 = self.dlg.mQgsFileWidget_1.lineEdit()
         lineEdit2 = self.dlg.mQgsFileWidget_2.lineEdit()
         lineEdit3 = self.dlg.mQgsFileWidget_3.lineEdit()
-        lineEdit4 = self.dlg.mQgsFileWidget_outShp.lineEdit()
-        lineEdit5 = self.dlg.mQgsFileWidget_outRas.lineEdit()
+        lineEdit4 = self.dlg.mQgsFileWidget_out.lineEdit()
         lineEdit1.clear()
         lineEdit2.clear()
         lineEdit3.clear()
         lineEdit4.clear()
-        lineEdit5.clear()
 
         # show the dialog
         self.dlg.show()
@@ -235,7 +233,7 @@ class NoiseRaster:
                 check_extent(raslist[1])
                 check_extent(raslist[2])
 
-            # Check file extension of source data.
+            # Check file extension of source data. Must be asc or tif.
             if len(raslist) == 1:
                 validate_source_format(raslist[0])
             elif len(raslist) == 2:
@@ -246,7 +244,7 @@ class NoiseRaster:
                 validate_source_format(raslist[1])
                 validate_source_format(raslist[2])
 
-            # Check for existence of CRS definition of each GTiff input raster
+            # Check for existence of CRS definition of each GTiff input raster. asc is assumed to be EPSG:25832.
             if len(raslist) == 1:
                 check_projection(raslist[0])
             elif len(raslist) == 2:
@@ -257,7 +255,7 @@ class NoiseRaster:
                 check_projection(raslist[1])
                 check_projection(raslist[2])
 
-            # Reproject rasters to EPSG: 3035
+            # Reproject tifs to EPSG:25832 translate ascs to tifs.
             if len(raslist) == 1:
                 reprojectlist = reproject(raslist[0])
                 reprojectlist = [reprojectlist]
@@ -272,10 +270,10 @@ class NoiseRaster:
                 reprojectlist = [reprojectlist1, reprojectlist2, reprojectlist3]
 
             # If more than one source path, run addition
-            # If only one source path, skip addition and run vectoriziation
+            # If only one source path, skip addition and run vectorization
             if len(raslist) > 1:
 
-                # Merge all input noise rasters
+                # Merge all input noise rasters in each list to create one merged raster, per list
                 mergedlist = merge_rasters(reprojectlist)
 
                 # Create merged virtual raster with multiple bands for addition
@@ -288,8 +286,8 @@ class NoiseRaster:
                 data_out = sum_sound_level_3D(zeroData)
 
                 # Write energetically added array to raster in GTiff format
-                out_ras = self.dlg.mQgsFileWidget_outRas.filePath()
-                out_energetic_ras =create_raster(data_out, out_ras, mergedVRT)
+                out_ras = self.dlg.mQgsFileWidget_out.filePath()
+                out_energetic_ras = create_raster(data_out, mergedVRT)
 
                 # Set no data value to -99.0
                 out_final_ras = set_nodata_value(out_energetic_ras)
@@ -298,35 +296,44 @@ class NoiseRaster:
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize energetically added raster including all noise sources
-                out_poly = self.dlg.mQgsFileWidget_outShp.filePath()
+                out_poly = self.dlg.mQgsFileWidget_out.filePath()
                 vectorize(out_final_ras, out_poly, selectedTableIndex)
+
+                # Reproject energetically added raster to EPSG:3035
+                reproject_3035(out_final_ras, out_ras)
 
             else:
 
                 # Write raster in tif format to selected file path
-                out_ras = self.dlg.mQgsFileWidget_outRas.filePath()
+                out_ras = self.dlg.mQgsFileWidget_out.filePath()
 
                 # Merge all input rasters for a single noise source
-                merge_rasters(reprojectlist, out_ras)
+                out_merged_ras = merge_rasters(reprojectlist)
 
                 # Get reclassification table
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize raster
-                out_poly = self.dlg.mQgsFileWidget_outShp.filePath()
-                vectorize(out_ras, out_poly, selectedTableIndex)
+                out_poly = self.dlg.mQgsFileWidget_out.filePath()
+                vectorize(out_merged_ras, out_poly, selectedTableIndex)
+
+                # Reproject raster to EPSG:3035
+                reproject_3035(out_merged_ras, out_ras)
 
             pass
 
-            # Load raster layer in QGIS
-            f_name_ras = os.path.basename(out_ras).split(".")[0]
-            self.iface.addRasterLayer(out_ras, f_name_ras)
+            # Delete temporary sub directory containing intermediate files created
+            delete_temp_directory()
 
-            # Load vector layer in QGIS
-            f_name_poly = os.path.basename(out_poly).split(".")[0]
-            self.iface.addVectorLayer(out_poly, f_name_poly, "ogr")
+            # Load raster layer created by the reproject_3035 function in QGIS
+            ras_layer = os.path.join(out_ras, 'final_3035.tif')
+            self.iface.addRasterLayer(ras_layer, "out")
+
+            # Load vector layer created by the vectorize function in QGIS
+            poly_layer = os.path.join(out_poly, 'final_3035.shp')
+            self.iface.addVectorLayer(poly_layer, "out", "ogr")
 
             # Display success message bar in QGIS
             self.iface.messageBar().pushMessage(
-                "Success", "Output file written at " + f_name_poly,
+                "Success", "Output file written at " + poly_layer,
                 level=3, duration=3)
