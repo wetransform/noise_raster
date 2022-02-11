@@ -330,7 +330,7 @@ class NoiseRaster:
             self.iface.addRasterLayer(ras_layer, "out")
 
             # Load vector layer created by the vectorize function in QGIS
-            poly_layer = os.path.join(out_poly, 'out.shp')
+            poly_layer = os.path.join(out_poly, 'final_3035.shp')
             self.iface.addVectorLayer(poly_layer, "out", "ogr")
 
             # Display success message bar in QGIS

@@ -31,7 +31,7 @@ temp_dir = rep_temp_dir + "/noise_" + DATETIME_str + "/"
 
 # Initiate logging
 
-logfile = temp_dir + "logfile.txt"
+logfile = rep_temp_dir + "/logfile.txt"
 formatter = '%(levelname)s: %(asctime)s - %(name)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=formatter, filename=logfile) #stream=sys.stdout if stdout, not stderr
 logger = logging.getLogger("noise_raster_v1")
@@ -66,13 +66,15 @@ def sum_sound_level_3D(sound_levels: np.array):
     if len(sound_levels.shape) != 3:
         raise ValueError('Input array not 3D ')
 
-    l, m, n = sound_levels.shape
+    sound_levels_fl16 = sound_levels.astype(np.float16)
 
-    sound_pressures = np.zeros((l, m, n)).astype('float32')
-    sum_pressures = np.zeros((l, m, n)).astype('float32')
-    out = np.zeros((l, m, n)).astype('float32')
+    l, m, n = sound_levels_fl16.shape
 
-    sound_pressures = np.power(10, 0.1 * sound_levels)
+    sound_pressures = np.zeros((l, m, n)).astype(np.float16)
+    sum_pressures = np.zeros((l, m, n)).astype(np.float16)
+    out = np.zeros((l, m, n)).astype(np.float16)
+
+    sound_pressures = np.power(10, 0.1 * sound_levels_fl16)
     sum_pressures = np.sum(sound_pressures, axis=0)
     out = 10 * np.log10(sum_pressures)
     rounded_out = out.round(decimals=1)
@@ -267,7 +269,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     dst_ds = None
 
     # Reproject polygon to EPSG:3035
-    out_poly_rprj = os.path.join(out_poly, 'out_3035.shp')
+    out_poly_rprj = os.path.join(out_poly, 'final_3035.shp')
 
     # Set reprojection parameters
 
