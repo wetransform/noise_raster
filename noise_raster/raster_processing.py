@@ -121,8 +121,14 @@ def check_extent(extent_list:list):
             logger.info('CHECK EXTENT: Filename: {}'.format(str(f_name)))
             logger.info('Pixel value: {}'.format(str(xmin_center)))
             logger.info('Pixel value: {}'.format(str(ymax_center)))
+            # Close dataset
+            check_extent = None
         else:
+            # Close dataset
+            check_extent = None
             pass
+
+
 
 def build_virtual_raster(in_vrt:list):
     """
@@ -152,6 +158,8 @@ def create_zero_array(in_ds):
     zeroData = np.where(data < 0, 0, data)
 
     return zeroData
+
+    ds = None
 
 def create_raster(sound_array:np.ndarray, merged_vrt):
     """
@@ -191,6 +199,7 @@ def create_raster(sound_array:np.ndarray, merged_vrt):
     # Close the datasets
     dsOut = None
     out_pth_ext = None
+    ds = None
 
 def vectorize(in_ds, out_poly, selectedTableIndex):
     """
@@ -315,6 +324,8 @@ def check_projection(in_data: list):
                 # Write file name to logfile
                 logger.info('SPATIAL REFERENCE NOT DEFINED: Filename: {}'.format(str(f_name)))
                 raise ValueError('Spatial reference system is not defined')
+
+            check_ds = None
 
 def reproject(input_files_path:list):
     """
