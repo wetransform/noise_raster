@@ -386,11 +386,15 @@ def reproject(input_files_path:list):
         if src.endswith(".asc"):
             # Translate asc files to tif using EPSG:25832 as defined source crs
 
+            # Get source directory name
+            d_path = os.path.dirname(input)
+            d_name = os.path.basename(d_path)
+
             # Get source file name
             f_name = os.path.basename(input).split(".")[0]
 
             # Create tif raster
-            out_tif = temp_dir + f_name + "_25832.tif"
+            out_tif = temp_dir + d_name + "_" + f_name + "_25832.tif"
 
             # Set translate options
             to = gdal.TranslateOptions(format="GTiff", outputSRS='EPSG:25832', outputType=gdal.GDT_Float32)
@@ -420,11 +424,15 @@ def reproject(input_files_path:list):
             # File is GTiff
             # Warp GTiff using dataset's defined crs as source crs
 
+            #Get source directory name
+            d_path = os.path.dirname(input)
+            d_name = os.path.basename(d_path)
+
             # Get source file name
             f_name = os.path.basename(input).split(".")[0]
 
             # Create reprojected raster
-            out_tif = temp_dir + f_name + "_25832.tif"
+            out_tif = temp_dir + d_name + "_" + f_name + "_25832.tif"
 
             # Open dataset
             check_ds = gdal.Open(input)
