@@ -23,13 +23,8 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
-from osgeo import gdal, ogr, osr
+from qgis.PyQt.QtWidgets import QAction, QMessageBox
 import os
-from os import listdir
-from os.path import isfile, join
-import numpy as np
-import sys
 
 from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value, reproject_3035, delete_temp_directory
 
@@ -321,6 +316,10 @@ class NoiseRaster:
                 reproject_3035(out_merged_ras, out_ras)
 
             pass
+
+            # Invoke modal dialog to enable user to check intermediate files in the temp folder before deletion.
+            QMessageBox.information(self.iface.mainWindow(), "Debug",
+                                    "Script has completed. You can find the temporary results in " + temp_dir + ". Press OK to delete the temporary result directory.")
 
             # Delete temporary sub directory containing intermediate files created
             delete_temp_directory()

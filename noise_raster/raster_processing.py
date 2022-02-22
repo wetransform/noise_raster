@@ -67,15 +67,15 @@ def sum_sound_level_3D(sound_levels: np.array):
     if len(sound_levels.shape) != 3:
         raise ValueError('Input array not 3D ')
 
-    sound_levels_fl32 = sound_levels.astype(np.float32)
+    sound_levels.astype(np.float32)
 
-    l, m, n = sound_levels_fl32.shape
+    l, m, n = sound_levels.shape
 
     sound_pressures = np.zeros((l, m, n)).astype(np.float32)
     sum_pressures = np.zeros((l, m, n)).astype(np.float32)
     out = np.zeros((l, m, n)).astype(np.float32)
 
-    sound_pressures = np.power(10, 0.1 * sound_levels_fl32)
+    sound_pressures = np.power(10, 0.1 * sound_levels)
     sum_pressures = np.sum(sound_pressures, axis=0)
     out = 10 * np.log10(sum_pressures)
     rounded_out = out.round(decimals=1)
