@@ -7,12 +7,10 @@
 
 from osgeo import gdal, ogr, osr
 from qgis.core import QgsRasterLayer, QgsProcessing
-import sys
 import os
 import shutil
 import processing
 import tempfile
-import subprocess
 import numpy as np
 import logging
 from datetime import datetime
@@ -49,6 +47,16 @@ selectedTableLden = [54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65,
 
 # Lnight
 selectedTableLnight = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
+
+def progress_callback(complete, message, callback_data):
+    """
+    Emit progress report in numbers for 10% intervals and dots for 3%
+    https://stackoverflow.com/questions/68025043/adding-a-progress-bar-to-gdal-translate
+    """
+    if int(complete*100) % 10 == 0:
+        print(f'{complete*100:.0f}', end='', flush=True)
+    elif int(complete*100) % 3 == 0:
+        print(f'{callback_data}', end='', flush=True)
 
 def sum_sound_level_3D(sound_levels: np.array):
     """
@@ -265,6 +273,9 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     # Get reclassified raster band
     band1 = check_ds.GetRasterBand(1)
 
+    # Write progress to python console
+    print('\nRunning GDAL polygonize...')
+
     # Vectorize reclassified raster to create polygon noise contours
     """
     Values that fall outside of the lden and lnight value ranges should not be carried over into the shapefile polygon that is created. 
@@ -272,7 +283,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     (instead of creating a separate raster mask file). When calling Polygonize, setting the maskBand parameter to the raster itself 
     removes the no data values identified as 0 from the polygon that is created.
     """
-    gdal.Polygonize(srcBand=band1, maskBand=band1, outLayer=dst_layer, iPixValField=0)
+    gdal.Polygonize(srcBand=band1, maskBand=band1, outLayer=dst_layer, iPixValField=0, callback=progress_callback, callback_data='.')
 
     # Close dataset
     check_ds = None
@@ -437,11 +448,17 @@ def merge_rasters(input_files_path:list, out_pth=None):
             # Create converted tif
             out_tif = temp_dir + str(counter) + "_25832.tif"
 
+            # Write progress to console
+            print("\nRunning GDAL BuildVRT to create merged raster based on list of rasters")
+
             # Set vrt options
-            gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0)
+            gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0, callback=progress_callback, callback_data='.')
+
+            # Write progress to console
+            print("\nRunning GDAL Translate to convert virtual merged raster to tif")
 
             # Set translate options
-            to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32)
+            to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.')
 
             # Convert vrt file to tif
             gdal.Translate(out_tif, out_vrt, options=to)
@@ -466,11 +483,17 @@ def merge_rasters(input_files_path:list, out_pth=None):
         # Create merged vrt
         out_vrt = temp_dir + "singleList_25832.vrt"
 
+        # Write progress to console
+        print("\nRunning GDAL BuildVRT to create merged raster based on list of rasters")
+
         # Set vrt options
-        gdal.BuildVRT(out_vrt, input_files_path[0], resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0)
+        gdal.BuildVRT(out_vrt, input_files_path[0], resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0, callback=progress_callback, callback_data='.')
+
+        # Write progress to console
+        print("\nRunning GDAL Translate to convert virtual merged raster to tif")
 
         # Set translate options
-        to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32)
+        to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.')
 
         # Add tif name and file extension to directory file path
         out_tif = os.path.join(out_pth, REPROJECTED_TIF25832)
@@ -533,10 +556,13 @@ def reproject_3035(in_ras, out_ras):
     # Add reprojected tif name and file extension to directory file path
     out_pth_ext = os.path.join(out_ras, REPROJECTED_TIF3035)
 
+    # Write progress to console
+    print("\nRunning GDAL Warp to reproject final EPSG:25832 raster to final EPSG:3035")
+
     # Reproject
     gdal.Warp(destNameOrDestDS=out_pth_ext, srcDSOrSrcDSTab=in_ras,
               options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
-                                       outputType=gdal.GDT_Float32))
+                                       outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.'))
 
     return out_pth_ext
 
