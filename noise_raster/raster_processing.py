@@ -16,6 +16,7 @@ import subprocess
 import numpy as np
 import logging
 from datetime import datetime
+from .constants import *
 
 # Get current temp directory
 
@@ -161,13 +162,13 @@ def create_zero_array(in_ds):
 
     ds = None
 
-def create_raster(sound_array:np.ndarray, merged_vrt):
+def create_raster(sound_array:np.ndarray, merged_vrt, out_pth=None):
     """
     Create raster based on energetically added array
     """
 
     # Add tif name and file extension to directory file path
-    out_pth_ext = temp_dir + 'energetic.tif'
+    out_pth_ext = os.path.join(out_pth, REPROJECTED_TIF25832)
 
     # Get geotranform of merged_vrt
     ds = gdal.Open(merged_vrt)
@@ -209,7 +210,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     """
 
     # Add shp name and file extension to directory path
-    out_poly_pth = os.path.join(out_poly, 'out.shp')
+    out_poly_pth = os.path.join(out_poly, REPROJECTED_SHP25832)
 
     # Set destination SRS of target shapefile
     dest_srs = osr.SpatialReference()
@@ -278,7 +279,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     dst_ds = None
 
     # Reproject polygon to EPSG:3035
-    out_poly_rprj = os.path.join(out_poly, 'final_3035.shp')
+    out_poly_rprj = os.path.join(out_poly, REPROJECTED_SHP3035)
 
     # Set reprojection parameters
 
@@ -417,7 +418,7 @@ def reproject(input_files_path:list):
 
     return reprojectedlist
 
-def merge_rasters(input_files_path:list):
+def merge_rasters(input_files_path:list, out_pth=None):
     """
     Merge lists of rasters into a single raster or merge a single list of rasters to a single raster.
     """
@@ -471,8 +472,8 @@ def merge_rasters(input_files_path:list):
         # Set translate options
         to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32)
 
-        # Create converted tif
-        out_tif = temp_dir + "singleList_25832.tif"
+        # Add tif name and file extension to directory file path
+        out_tif = os.path.join(out_pth, REPROJECTED_TIF25832)
 
         # Convert vrt file to tif
         gdal.Translate(out_tif, out_vrt, options=to)
@@ -530,7 +531,7 @@ def reproject_3035(in_ras, out_ras):
     """
 
     # Add reprojected tif name and file extension to directory file path
-    out_pth_ext = os.path.join(out_ras, 'final_3035.tif')
+    out_pth_ext = os.path.join(out_ras, REPROJECTED_TIF3035)
 
     # Reproject
     gdal.Warp(destNameOrDestDS=out_pth_ext, srcDSOrSrcDSTab=in_ras,

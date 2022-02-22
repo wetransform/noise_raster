@@ -287,7 +287,7 @@ class NoiseRaster:
 
                 # Write energetically added array to raster in GTiff format
                 out_ras = self.dlg.mQgsFileWidget_out.filePath()
-                out_energetic_ras = create_raster(data_out, mergedVRT)
+                out_energetic_ras = create_raster(data_out, mergedVRT, out_ras)
 
                 # Set no data value to -99.0
                 out_final_ras = set_nodata_value(out_energetic_ras)
@@ -308,7 +308,7 @@ class NoiseRaster:
                 out_ras = self.dlg.mQgsFileWidget_out.filePath()
 
                 # Merge all input rasters for a single noise source
-                out_merged_ras = merge_rasters(reprojectlist)
+                out_merged_ras = merge_rasters(reprojectlist, out_ras)
 
                 # Get reclassification table
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
