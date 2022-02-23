@@ -16,25 +16,6 @@ import logging
 from datetime import datetime
 from .constants import *
 
-# Get current temp directory
-
-cur_temp_dir = tempfile.gettempdir()
-rep_temp_dir = cur_temp_dir.replace(os.sep, '/')
-# Get current date and time
-DATETIME = datetime.now()
-# Convert date, time to string in format: dd_mm_YY_H_M_S
-DATETIME_str = DATETIME.strftime("%d_%m_%Y_%H_%M_%S")
-# Create sub directory named 'noise_<current date and time>' in temp folder to collect intermediate files
-os.makedirs(rep_temp_dir + "/noise_" + DATETIME_str)
-temp_dir = rep_temp_dir + "/noise_" + DATETIME_str + "/"
-
-# Initiate logging
-
-logfile = rep_temp_dir + "/logfile.txt"
-formatter = '%(levelname)s: %(asctime)s - %(name)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=formatter, filename=logfile) #stream=sys.stdout if stdout, not stderr
-logger = logging.getLogger("noise_raster_v1")
-
 # Reclassification tables
 """
 The selected table values are required input for the "Reclassify by Table" operation. The user selects "Lden" or "Lnight" in the user interface of the tool. 
