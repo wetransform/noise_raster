@@ -27,7 +27,7 @@ from qgis.PyQt.QtWidgets import QAction, QMessageBox
 import os
 
 from .raster_processing import sum_sound_level_3D, merge_rasters, vectorize, check_projection, validate_source_format, check_extent, create_raster, build_virtual_raster, reproject, source_raster_list, create_zero_array, set_nodata_value, reproject_3035, delete_temp_directory, create_temp_directory, start_logging
-from .constants import *
+import noise_raster.constants as c
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -73,6 +73,9 @@ class NoiseRaster:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+
+        # Create log file
+        logger = start_logging()
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -210,9 +213,7 @@ class NoiseRaster:
         # See if OK was pressed
         if result:
             # Create temp sub-directory
-            temp_dir, rep_temp_dir = create_temp_directory()
-            # Create log file
-            logger = start_logging(rep_temp_dir)
+            temp_dir, date_time = create_temp_directory()
             # Maximum of 3 source folder paths.
             # Get individual source folder paths.
             noisePths1 = self.dlg.mQgsFileWidget_1.filePath()
@@ -224,36 +225,36 @@ class NoiseRaster:
 
             # Check extent of each input raster
             if len(raslist) == 1:
-                check_extent(raslist[0], logger)
+                check_extent(raslist[0])
             elif len(raslist) == 2:
-                check_extent(raslist[0], logger)
-                check_extent(raslist[1], logger)
+                check_extent(raslist[0])
+                check_extent(raslist[1])
             else:
-                check_extent(raslist[0], logger)
-                check_extent(raslist[1], logger)
-                check_extent(raslist[2], logger)
+                check_extent(raslist[0])
+                check_extent(raslist[1])
+                check_extent(raslist[2])
 
             # Check file extension of source data. Must be asc or tif.
             if len(raslist) == 1:
-                validate_source_format(raslist[0], logger)
+                validate_source_format(raslist[0])
             elif len(raslist) == 2:
-                validate_source_format(raslist[0], logger)
-                validate_source_format(raslist[1], logger)
+                validate_source_format(raslist[0])
+                validate_source_format(raslist[1])
             else:
-                validate_source_format(raslist[0], logger)
-                validate_source_format(raslist[1], logger)
-                validate_source_format(raslist[2], logger)
+                validate_source_format(raslist[0])
+                validate_source_format(raslist[1])
+                validate_source_format(raslist[2])
 
             # Check for existence of CRS definition of each GTiff input raster. asc is assumed to be EPSG:25832.
             if len(raslist) == 1:
-                check_projection(raslist[0], logger)
+                check_projection(raslist[0])
             elif len(raslist) == 2:
-                check_projection(raslist[0], logger)
-                check_projection(raslist[1], logger)
+                check_projection(raslist[0])
+                check_projection(raslist[1])
             else:
-                check_projection(raslist[0], logger)
-                check_projection(raslist[1], logger)
-                check_projection(raslist[2], logger)
+                check_projection(raslist[0])
+                check_projection(raslist[1])
+                check_projection(raslist[2])
 
             # Reproject tifs to EPSG:25832 translate ascs to tifs.
             if len(raslist) == 1:
@@ -269,6 +270,9 @@ class NoiseRaster:
                 reprojectlist3 = reproject(raslist[2], temp_dir)
                 reprojectlist = [reprojectlist1, reprojectlist2, reprojectlist3]
 
+            # Selected output folder path
+            out = self.dlg.mQgsFileWidget_out.filePath()
+
             # If more than one source path, run addition
             # If only one source path, skip addition and run vectorization
             if len(raslist) > 1:
@@ -283,11 +287,10 @@ class NoiseRaster:
                 zeroData = create_zero_array(mergedVRT)
 
                 # Call calculation function
-                data_out = sum_sound_level_3D(zeroData)
+                sound_sum = sum_sound_level_3D(zeroData)
 
                 # Write energetically added array to raster in GTiff format
-                out_ras = self.dlg.mQgsFileWidget_out.filePath()
-                out_energetic_ras = create_raster(data_out, mergedVRT, out_ras)
+                out_energetic_ras = create_raster(sound_sum, mergedVRT, out)
 
                 # Set no data value to -99.0
                 out_final_ras = set_nodata_value(out_energetic_ras)
@@ -296,29 +299,24 @@ class NoiseRaster:
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize energetically added raster including all noise sources
-                out_poly = self.dlg.mQgsFileWidget_out.filePath()
-                vectorize(out_final_ras, out_poly, selectedTableIndex, temp_dir, logger)
+                vectorize(out_final_ras, out, selectedTableIndex, temp_dir)
 
                 # Reproject energetically added raster to EPSG:3035
-                reproject_3035(out_final_ras, out_ras)
+                reproject_3035(out_final_ras, out)
 
             else:
 
-                # Write raster in tif format to selected file path
-                out_ras = self.dlg.mQgsFileWidget_out.filePath()
-
                 # Merge all input rasters for a single noise source
-                out_merged_ras = merge_rasters(reprojectlist, temp_dir, out_ras)
+                out_merged_ras = merge_rasters(reprojectlist, temp_dir, out)
 
                 # Get reclassification table
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize raster
-                out_poly = self.dlg.mQgsFileWidget_out.filePath()
-                vectorize(out_merged_ras, out_poly, selectedTableIndex, temp_dir, logger)
+                vectorize(out_merged_ras, out, selectedTableIndex, temp_dir)
 
                 # Reproject raster to EPSG:3035
-                reproject_3035(out_merged_ras, out_ras)
+                reproject_3035(out_merged_ras, out)
 
             pass
 
@@ -327,14 +325,15 @@ class NoiseRaster:
                                     "Script has completed. You can find the temporary results in " + temp_dir + ". Press OK to delete the temporary result directory.")
 
             # Delete temporary sub directory containing intermediate files created
-            delete_temp_directory(temp_dir)
+            delete_temp_directory(date_time)
+
 
             # Load raster layer created by the reproject_3035 function in QGIS
-            ras_layer = os.path.join(out_ras, REPROJECTED_TIF3035)
+            ras_layer = os.path.join(out, c.REPROJECTED_TIF3035)
             self.iface.addRasterLayer(ras_layer, "out")
 
             # Load vector layer created by the vectorize function in QGIS
-            poly_layer = os.path.join(out_poly, REPROJECTED_SHP3035)
+            poly_layer = os.path.join(out, c.REPROJECTED_SHP3035)
             self.iface.addVectorLayer(poly_layer, "out", "ogr")
 
             # Display success message bar in QGIS
