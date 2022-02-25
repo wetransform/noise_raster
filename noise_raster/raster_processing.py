@@ -74,15 +74,14 @@ def create_temp_directory():
     """
     Create a sub-directory in the current temp folder to hold intermediate files.
     """
-    # Get current date and time
-    DATETIME = datetime.now()
-    # Convert date, time to string in format: dd_mm_YY_H_M_S
-    DATETIME_str = DATETIME.strftime("%d_%m_%Y_%H_%M_%S")
-    # Create sub directory named 'noise_<current date and time>' in temp folder to collect intermediate files
-    os.makedirs(c.root_temp_dir + "/noise_" + DATETIME_str)
-    temp_dir = c.root_temp_dir + "/noise_" + DATETIME_str + "/"
 
-    return temp_dir, DATETIME_str
+    # Convert date, time to string in format: dd_mm_YY_H_M_S
+    datetime_str = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+    # Create sub directory named 'noise_<current date and time>' in temp folder to collect intermediate files
+    os.makedirs(c.root_temp_dir + "/noise_" + datetime_str)
+    temp_dir = c.root_temp_dir + "/noise_" + datetime_str + "/"
+
+    return temp_dir, datetime_str
 
 global logger
 
