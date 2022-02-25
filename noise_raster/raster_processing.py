@@ -77,11 +77,11 @@ def sum_sound_level_3D(sound_levels: np.array):
     sum_pressures = np.zeros((l, m, n)).astype(np.float32)
     out = np.zeros((l, m, n)).astype(np.float32)
 
-    sound_pressures = np.power(10, 0.1 * sound_levels_fl32)
+    sound_pressures = np.power(10, 0.1 * sound_levels)
     sum_pressures = np.sum(sound_pressures, axis=0)
     out = np.round_((10 * np.log10(sum_pressures)), decimals=1)
 
-    return rounded_out
+    return out
 
 def create_temp_directory():
     """

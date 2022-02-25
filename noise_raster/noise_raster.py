@@ -278,7 +278,6 @@ class NoiseRaster:
             if len(raslist) > 1:
 
                 # Merge all input noise rasters in each list to create one merged raster, per list
-
                 mergedlist = merge_rasters(reprojectlist, temp_dir)
 
                 # Create merged virtual raster with multiple bands for addition
@@ -301,7 +300,6 @@ class NoiseRaster:
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize energetically added raster including all noise sources
-
                 vectorize(out_final_ras, out, selectedTableIndex, temp_dir)
 
                 # Reproject energetically added raster to EPSG:3035
