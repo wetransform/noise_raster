@@ -278,6 +278,7 @@ class NoiseRaster:
             if len(raslist) > 1:
 
                 # Merge all input noise rasters in each list to create one merged raster, per list
+
                 mergedlist = merge_rasters(reprojectlist, temp_dir)
 
                 # Create merged virtual raster with multiple bands for addition
@@ -290,6 +291,7 @@ class NoiseRaster:
                 sound_sum = sum_sound_level_3D(zeroData)
 
                 # Write energetically added array to raster in GTiff format
+
                 out_energetic_ras = create_raster(sound_sum, mergedVRT, out)
 
                 # Set no data value to -99.0
@@ -299,6 +301,7 @@ class NoiseRaster:
                 selectedTableIndex = self.dlg.comboBox.currentIndex()
 
                 # Vectorize energetically added raster including all noise sources
+
                 vectorize(out_final_ras, out, selectedTableIndex, temp_dir)
 
                 # Reproject energetically added raster to EPSG:3035
@@ -334,6 +337,7 @@ class NoiseRaster:
 
             # Load vector layer created by the vectorize function in QGIS
             poly_layer = os.path.join(out, c.REPROJECTED_SHP3035)
+
             self.iface.addVectorLayer(poly_layer, "out", "ogr")
 
             # Display success message bar in QGIS

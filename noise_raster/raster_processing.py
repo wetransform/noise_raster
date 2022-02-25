@@ -39,6 +39,19 @@ def progress_callback(complete, message, callback_data):
     elif int(complete*100) % 3 == 0:
         print(f'{callback_data}', end='', flush=True)
 
+# Reclassification tables
+"""
+The selected table values are required input for the "Reclassify by Table" operation. The user selects "Lden" or "Lnight" in the user interface of the tool. 
+"Lden" categories are used for daytime noise and "Lnight" are used for night time noise. These value ranges are standards used in noise mapping. 
+The input raster is reclassified so that each raster cell gets the same value if it's cell value falls into one of the given ranges. 
+This pre-processing step dramatically improves the performance of the vectorization process.
+"""
+# Lden
+selectedTableLden = [54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, 74.49999, 70, 74.5, '', 75]
+
+# Lnight
+selectedTableLnight = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
+
 def sum_sound_level_3D(sound_levels: np.array):
     """
     INPUT: array of dimension (m,n,l) - stack of sound levels on a 2D map
@@ -64,11 +77,11 @@ def sum_sound_level_3D(sound_levels: np.array):
     sum_pressures = np.zeros((l, m, n)).astype(np.float32)
     out = np.zeros((l, m, n)).astype(np.float32)
 
-    sound_pressures = np.power(10, 0.1 * sound_levels)
+    sound_pressures = np.power(10, 0.1 * sound_levels_fl32)
     sum_pressures = np.sum(sound_pressures, axis=0)
     out = np.round_((10 * np.log10(sum_pressures)), decimals=1)
 
-    return out
+    return rounded_out
 
 def create_temp_directory():
     """
@@ -417,7 +430,7 @@ def reproject(input_files_path:list, temp_dir):
         else:
             # File is GTiff
             # Warp GTiff using dataset's defined crs as source crs
-
+            
             # Create reprojected raster
             out_tif = temp_dir + d_name + "_" + f_name + "_25832.tif"
 
@@ -588,15 +601,18 @@ def reproject_3035(in_ras, out_ras):
               options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
                                        outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.'))
 
+
     return out_pth_ext
 
     out_pth_ext = None
 
 def delete_temp_directory(date_time):
+
     """
     Delete the temporary sub-directory containing all intermediate files created.
     """
 
     # Delete temp sub directory
+
     temp_dir_pth = c.ROOT_TEMP_DIR + "/noise_" + date_time
     shutil.rmtree(temp_dir_pth)
