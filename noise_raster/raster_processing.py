@@ -7,34 +7,37 @@
 
 from osgeo import gdal, ogr, osr
 from qgis.core import QgsRasterLayer, QgsProcessing
-import sys
 import os
 import shutil
 import processing
 import tempfile
-import subprocess
 import numpy as np
 import logging
 from datetime import datetime
+import noise_raster.constants as c
 
-# Get current temp directory
+# Reclassification tables
+"""
+The selected table values are required input for the "Reclassify by Table" operation. The user selects "Lden" or "Lnight" in the user interface of the tool. 
+"Lden" categories are used for daytime noise and "Lnight" are used for night time noise. These value ranges are standards used in noise mapping. 
+The input raster is reclassified so that each raster cell gets the same value if it's cell value falls into one of the given ranges. 
+This pre-processing step dramatically improves the performance of the vectorization process.
+"""
+# Lden
+selectedTableLden = [54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, 74.49999, 70, 74.5, '', 75]
 
-cur_temp_dir = tempfile.gettempdir()
-rep_temp_dir = cur_temp_dir.replace(os.sep, '/')
-# Get current date and time
-DATETIME = datetime.now()
-# Convert date, time to string in format: dd_mm_YY_H_M_S
-DATETIME_str = DATETIME.strftime("%d_%m_%Y_%H_%M_%S")
-# Create sub directory named 'noise_<current date and time>' in temp folder to collect intermediate files
-os.makedirs(rep_temp_dir + "/noise_" + DATETIME_str)
-temp_dir = rep_temp_dir + "/noise_" + DATETIME_str + "/"
+# Lnight
+selectedTableLnight = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
 
-# Initiate logging
-
-logfile = rep_temp_dir + "/logfile.txt"
-formatter = '%(levelname)s: %(asctime)s - %(name)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=formatter, filename=logfile) #stream=sys.stdout if stdout, not stderr
-logger = logging.getLogger("noise_raster_v1")
+def progress_callback(complete, message, callback_data):
+    """
+    Emit progress report in numbers for 10% intervals and dots for 3%
+    https://stackoverflow.com/questions/68025043/adding-a-progress-bar-to-gdal-translate
+    """
+    if int(complete*100) % 10 == 0:
+        print(f'{complete*100:.0f}', end='', flush=True)
+    elif int(complete*100) % 3 == 0:
+        print(f'{callback_data}', end='', flush=True)
 
 # Reclassification tables
 """
@@ -66,9 +69,9 @@ def sum_sound_level_3D(sound_levels: np.array):
     if len(sound_levels.shape) != 3:
         raise ValueError('Input array not 3D ')
 
-    sound_levels_fl32 = sound_levels.astype(np.float32)
+    sound_levels.astype(np.float32)
 
-    l, m, n = sound_levels_fl32.shape
+    l, m, n = sound_levels.shape
 
     sound_pressures = np.zeros((l, m, n)).astype(np.float32)
     sum_pressures = np.zeros((l, m, n)).astype(np.float32)
@@ -76,10 +79,57 @@ def sum_sound_level_3D(sound_levels: np.array):
 
     sound_pressures = np.power(10, 0.1 * sound_levels_fl32)
     sum_pressures = np.sum(sound_pressures, axis=0)
-    out = 10 * np.log10(sum_pressures)
-    rounded_out = out.round(decimals=1)
+    out = np.round_((10 * np.log10(sum_pressures)), decimals=1)
 
     return rounded_out
+
+def create_temp_directory():
+    """
+    Create a sub-directory in the current temp folder to hold intermediate files.
+    """
+
+    # Convert date, time to string in format: dd_mm_YY_H_M_S
+    datetime_str = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+    # Create sub directory named 'noise_<current date and time>' in temp folder to collect intermediate files
+    os.makedirs(c.ROOT_TEMP_DIR + "/noise_" + datetime_str)
+    temp_dir = c.ROOT_TEMP_DIR + "/noise_" + datetime_str + "/"
+
+    return temp_dir, datetime_str
+
+global logger
+
+def start_logging():
+    """
+    Initiate logging
+    """
+
+    logfile = c.ROOT_TEMP_DIR + "/logfile.txt"
+    formatter = '%(levelname)s: %(asctime)s - %(name)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=formatter,
+                        filename=logfile)  # stream=sys.stdout if stdout, not stderr
+    global logger
+    logger = logging.getLogger("noise_raster_v1")
+
+    return logger
+
+def log(message, variable=None):
+    """
+    Write message to log file
+    """
+    if variable:
+        logger.info(message.format(variable))
+    else:
+        logger.info(message)
+
+def log_console(message, variable=None):
+    """
+    Write message to python console and log file
+    """
+    log(message, variable)
+    if variable:
+        print(message.format(variable), end='', flush=True)
+    else:
+        print(message, end='', flush=True)
 
 
 def source_raster_list(*folderpaths):
@@ -118,9 +168,9 @@ def check_extent(extent_list:list):
             # Get source file name
             f_name = os.path.basename(ds).split(".")[0]
             # Write file name and extent to logfile
-            logger.info('CHECK EXTENT: Filename: {}'.format(str(f_name)))
-            logger.info('Pixel value: {}'.format(str(xmin_center)))
-            logger.info('Pixel value: {}'.format(str(ymax_center)))
+            log('CHECK EXTENT: Filename: {}', (str(f_name)))
+            log('Pixel value: {}', (str(xmin_center)))
+            log('Pixel value: {}', (str(ymax_center)))
             # Close dataset
             check_extent = None
         else:
@@ -130,7 +180,7 @@ def check_extent(extent_list:list):
 
 
 
-def build_virtual_raster(in_vrt:list):
+def build_virtual_raster(in_vrt:list, temp_dir):
     """
     Build virtual multi-band raster as input to addition
     """
@@ -141,9 +191,6 @@ def build_virtual_raster(in_vrt:list):
     gdal.BuildVRT(merged_vrt, in_vrt, options=vrto)
 
     return merged_vrt
-
-    # Write to disk
-    merged_vrt = None
 
 def create_zero_array(in_ds):
     """
@@ -159,15 +206,13 @@ def create_zero_array(in_ds):
 
     return zeroData
 
-    ds = None
-
-def create_raster(sound_array:np.ndarray, merged_vrt):
+def create_raster(sound_array:np.ndarray, merged_vrt, out_pth=None):
     """
     Create raster based on energetically added array
     """
 
-    # Add tif name and file extension to directory file path
-    out_pth_ext = temp_dir + 'energetic.tif'
+    # Add tif name and file extension to directory file path.
+    out_pth_ext = os.path.join(out_pth, c.REPROJECTED_TIF25832)
 
     # Get geotranform of merged_vrt
     ds = gdal.Open(merged_vrt)
@@ -201,7 +246,7 @@ def create_raster(sound_array:np.ndarray, merged_vrt):
     out_pth_ext = None
     ds = None
 
-def vectorize(in_ds, out_poly, selectedTableIndex):
+def vectorize(in_ds, out_poly, selectedTableIndex, temp_dir):
     """
     Create polygon for vectorization. Reclassify source input raster.
     Vectorize reclassified raster.
@@ -209,7 +254,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     """
 
     # Add shp name and file extension to directory path
-    out_poly_pth = os.path.join(out_poly, 'out.shp')
+    out_poly_pth = os.path.join(out_poly, c.REPROJECTED_SHP25832)
 
     # Set destination SRS of target shapefile
     dest_srs = osr.SpatialReference()
@@ -236,7 +281,7 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
         selectedTable = selectedTableLnight
     else:
         # Write to logfile
-        logger.info('RECLASSIFICATION TABLE WAS NOT SELECTED')
+        log('RECLASSIFICATION TABLE WAS NOT SELECTED')
         raise ValueError('Reclassification table not selected')
 
     # Reclassification output path
@@ -264,6 +309,9 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     # Get reclassified raster band
     band1 = check_ds.GetRasterBand(1)
 
+    # Write progress to python console
+    log_console('\nRunning GDAL polygonize...')
+
     # Vectorize reclassified raster to create polygon noise contours
     """
     Values that fall outside of the lden and lnight value ranges should not be carried over into the shapefile polygon that is created. 
@@ -271,14 +319,14 @@ def vectorize(in_ds, out_poly, selectedTableIndex):
     (instead of creating a separate raster mask file). When calling Polygonize, setting the maskBand parameter to the raster itself 
     removes the no data values identified as 0 from the polygon that is created.
     """
-    gdal.Polygonize(srcBand=band1, maskBand=band1, outLayer=dst_layer, iPixValField=0)
+    gdal.Polygonize(srcBand=band1, maskBand=band1, outLayer=dst_layer, iPixValField=0, callback=progress_callback, callback_data='.')
 
     # Close dataset
     check_ds = None
     dst_ds = None
 
     # Reproject polygon to EPSG:3035
-    out_poly_rprj = os.path.join(out_poly, 'final_3035.shp')
+    out_poly_rprj = os.path.join(out_poly, c.REPROJECTED_SHP3035)
 
     # Set reprojection parameters
 
@@ -322,12 +370,12 @@ def check_projection(in_data: list):
                 # Get source file name
                 f_name = os.path.basename(ds).split(".")[0]
                 # Write file name to logfile
-                logger.info('SPATIAL REFERENCE NOT DEFINED: Filename: {}'.format(str(f_name)))
+                log('Filename: {}', (str(f_name)))
                 raise ValueError('Spatial reference system is not defined')
 
             check_ds = None
 
-def reproject(input_files_path:list):
+def reproject(input_files_path:list, temp_dir):
     """
     Reproject tifs to EPSG:25832. Source crs of GTiff files is read from the data.
     Translate asc files to tifs. Source crs of asc files is assumed to be EPSG:25832.
@@ -339,17 +387,21 @@ def reproject(input_files_path:list):
 
     for input in input_files_path:
 
+        # Get source directory name
+        d_path = os.path.dirname(input)
+        d_name = os.path.basename(d_path)
+
+        # Get source file name
+        f_name = os.path.basename(input).split(".")[0]
+
         # Check if raster is asc
         # Convert to lowercase
         src = input.lower()
         if src.endswith(".asc"):
             # Translate asc files to tif using EPSG:25832 as defined source crs
 
-            # Get source file name
-            f_name = os.path.basename(input).split(".")[0]
-
             # Create tif raster
-            out_tif = temp_dir + f_name + "_25832.tif"
+            out_tif = temp_dir + d_name + "_" + f_name + "_25832.tif"
 
             # Set translate options
             to = gdal.TranslateOptions(format="GTiff", outputSRS='EPSG:25832', outputType=gdal.GDT_Float32)
@@ -378,12 +430,9 @@ def reproject(input_files_path:list):
         else:
             # File is GTiff
             # Warp GTiff using dataset's defined crs as source crs
-
-            # Get source file name
-            f_name = os.path.basename(input).split(".")[0]
-
+            
             # Create reprojected raster
-            out_tif = temp_dir + f_name + "_25832.tif"
+            out_tif = temp_dir + d_name + "_" + f_name + "_25832.tif"
 
             # Open dataset
             check_ds = gdal.Open(input)
@@ -417,7 +466,7 @@ def reproject(input_files_path:list):
 
     return reprojectedlist
 
-def merge_rasters(input_files_path:list):
+def merge_rasters(input_files_path:list, temp_dir, out_pth=None):
     """
     Merge lists of rasters into a single raster or merge a single list of rasters to a single raster.
     """
@@ -436,11 +485,17 @@ def merge_rasters(input_files_path:list):
             # Create converted tif
             out_tif = temp_dir + str(counter) + "_25832.tif"
 
+            # Write progress to console
+            log_console("\nRunning GDAL BuildVRT to create merged raster based on list of rasters...")
+
             # Set vrt options
-            gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0)
+            gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0, callback=progress_callback, callback_data='.')
+
+            # Write progress to console
+            log_console("\nRunning GDAL Translate to convert virtual merged raster to tif...")
 
             # Set translate options
-            to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32)
+            to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.')
 
             # Convert vrt file to tif
             gdal.Translate(out_tif, out_vrt, options=to)
@@ -465,14 +520,20 @@ def merge_rasters(input_files_path:list):
         # Create merged vrt
         out_vrt = temp_dir + "singleList_25832.vrt"
 
+        # Write progress to console
+        log_console("\nRunning GDAL BuildVRT to create merged raster based on list of rasters...")
+
         # Set vrt options
-        gdal.BuildVRT(out_vrt, input_files_path[0], resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0)
+        gdal.BuildVRT(out_vrt, input_files_path[0], resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0, callback=progress_callback, callback_data='.')
+
+        # Write progress to console
+        log_console("\nRunning GDAL Translate to convert virtual merged raster to tif...")
 
         # Set translate options
-        to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32)
+        to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.')
 
-        # Create converted tif
-        out_tif = temp_dir + "singleList_25832.tif"
+        # Add tif name and file extension to directory file path.
+        out_tif = os.path.join(out_pth, c.REPROJECTED_TIF25832)
 
         # Convert vrt file to tif
         gdal.Translate(out_tif, out_vrt, options=to)
@@ -499,7 +560,7 @@ def validate_source_format(srcData:list):
             # Get source file name
             f_name = os.path.basename(srcDs).split(".")[0]
             # Write file name to logfile
-            logger.info('EXTENSION NOT ASC OR TIF: Filename: {}'.format(str(f_name)))
+            log('EXTENSION NOT ASC OR TIF: Filename: {}', (str(f_name)))
             raise ValueError('File extension is not .asc or .tif')
 
 def set_nodata_value(in_ds):
@@ -529,23 +590,29 @@ def reproject_3035(in_ras, out_ras):
     Reproject the final output raster to EPSG:3035.
     """
 
-    # Add reprojected tif name and file extension to directory file path
-    out_pth_ext = os.path.join(out_ras, 'final_3035.tif')
+    # Add reprojected tif name and file extension to directory file path.
+    out_pth_ext = os.path.join(out_ras, c.REPROJECTED_TIF3035)
+
+    # Write progress to console
+    log_console("\nRunning GDAL Warp to reproject final EPSG:25832 raster to final EPSG:3035...")
 
     # Reproject
     gdal.Warp(destNameOrDestDS=out_pth_ext, srcDSOrSrcDSTab=in_ras,
               options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
-                                       outputType=gdal.GDT_Float32))
+                                       outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.'))
+
 
     return out_pth_ext
 
     out_pth_ext = None
 
-def delete_temp_directory():
+def delete_temp_directory(date_time):
+
     """
     Delete the temporary sub-directory containing all intermediate files created.
     """
 
     # Delete temp sub directory
-    temp_dir_pth = rep_temp_dir + "/noise_" + DATETIME_str
+
+    temp_dir_pth = c.ROOT_TEMP_DIR + "/noise_" + date_time
     shutil.rmtree(temp_dir_pth)
