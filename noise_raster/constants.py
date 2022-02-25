@@ -17,4 +17,4 @@ REPROJECTED_SHP25832 = "final_25832.shp"
 
 logger = None
 
-root_temp_dir = tempfile.gettempdir().replace(os.sep, '/')
+ROOT_TEMP_DIR = tempfile.gettempdir().replace(os.sep, '/')

@@ -78,8 +78,8 @@ def create_temp_directory():
     # Convert date, time to string in format: dd_mm_YY_H_M_S
     datetime_str = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
     # Create sub directory named 'noise_<current date and time>' in temp folder to collect intermediate files
-    os.makedirs(c.root_temp_dir + "/noise_" + datetime_str)
-    temp_dir = c.root_temp_dir + "/noise_" + datetime_str + "/"
+    os.makedirs(c.ROOT_TEMP_DIR + "/noise_" + datetime_str)
+    temp_dir = c.ROOT_TEMP_DIR + "/noise_" + datetime_str + "/"
 
     return temp_dir, datetime_str
 
@@ -90,7 +90,7 @@ def start_logging():
     Initiate logging
     """
 
-    logfile = c.root_temp_dir + "/logfile.txt"
+    logfile = c.ROOT_TEMP_DIR + "/logfile.txt"
     formatter = '%(levelname)s: %(asctime)s - %(name)s - %(message)s'
     logging.basicConfig(level=logging.INFO, format=formatter,
                         filename=logfile)  # stream=sys.stdout if stdout, not stderr
@@ -598,5 +598,5 @@ def delete_temp_directory(date_time):
     """
 
     # Delete temp sub directory
-    temp_dir_pth = c.root_temp_dir + "/noise_" + date_time
+    temp_dir_pth = c.ROOT_TEMP_DIR + "/noise_" + date_time
     shutil.rmtree(temp_dir_pth)
