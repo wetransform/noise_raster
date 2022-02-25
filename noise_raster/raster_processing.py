@@ -66,7 +66,7 @@ def sum_sound_level_3D(sound_levels: np.array):
 
     sound_pressures = np.power(10, 0.1 * sound_levels)
     sum_pressures = np.sum(sound_pressures, axis=0)
-    out = (10 * np.log10(sum_pressures)).round(decimals=1)
+    out = np.round_((10 * np.log10(sum_pressures)), decimals=1)
 
     return out
 
