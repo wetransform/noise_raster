@@ -140,6 +140,9 @@ def source_raster_list(*folderpaths):
     rasterlist = []
     out_rasterlist = []
 
+    # Write progress to console
+    log_console("\nCreating lists of source raster files...")
+
     for path in folderpaths:
         if len(path) != 0:
             rasterlist.append(path)
@@ -155,6 +158,9 @@ def check_extent(extent_list:list):
     """
     Check extent of each raster is divisible by 100
     """
+    # Write progress to console
+    log_console("\nChecking extent of source rasters...")
+
     for ds in extent_list:
         # Open dataset
         check_extent = gdal.Open(ds)
@@ -347,6 +353,8 @@ def check_projection(in_data: list):
     """
     Check for existence of a defined projection in GTiff files
     """
+    # Write progress to console
+    log_console("\nChecking CRS of source rasters...")
 
     for ds in in_data:
 
@@ -381,6 +389,9 @@ def reproject(input_files_path:list, temp_dir):
     Translate asc files to tifs. Source crs of asc files is assumed to be EPSG:25832.
     Set no data value to -99.0.
     """
+
+    # Write progress to console
+    log_console("\nReprojecting source rasters...")
 
     # List to hold list of reprojected rasters
     reprojectedlist = []
@@ -601,6 +612,8 @@ def reproject_3035(in_ras, out_ras):
               options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
                                        outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.'))
 
+    # Write progress to console
+    log_console("\nScript completed.")
 
     return out_pth_ext
 
