@@ -49,6 +49,8 @@ def sum_sound_level_3D(sound_levels: np.array):
     l: no. of sound levels per cell's node
 
     """
+    # Write progress to python console
+    log_console('\nRunning energetic addition...')
 
     if not isinstance(sound_levels, np.ndarray):
         raise TypeError('Input is not an array')
@@ -177,6 +179,9 @@ def build_virtual_raster(in_vrt:list, temp_dir):
     """
     Build virtual multi-band raster as input to addition
     """
+    # Write progress to python console
+    log_console('\nCreating multi-band raster...')
+
     merged_vrt = temp_dir + 'allnoise.vrt'
 
     # Set options
@@ -203,6 +208,8 @@ def create_raster(sound_array:np.ndarray, merged_vrt, out_pth=None):
     """
     Create raster based on energetically added array
     """
+    # Write progress to python console
+    log_console('\nCreating energetic raster...')
 
     # Add tif name and file extension to directory file path.
     out_pth_ext = os.path.join(out_pth, c.REPROJECTED_TIF25832)
