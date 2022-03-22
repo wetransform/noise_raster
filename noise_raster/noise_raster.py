@@ -223,17 +223,6 @@ class NoiseRaster:
             # Check for minimum of one file path
             raslist = source_raster_list(noisePths1, noisePths2, noisePths3)
 
-            # Check extent of each input raster
-            if len(raslist) == 1:
-                check_extent(raslist[0])
-            elif len(raslist) == 2:
-                check_extent(raslist[0])
-                check_extent(raslist[1])
-            else:
-                check_extent(raslist[0])
-                check_extent(raslist[1])
-                check_extent(raslist[2])
-
             # Check file extension of source data. Must be asc or tif.
             if len(raslist) == 1:
                 validate_source_format(raslist[0])
@@ -244,6 +233,17 @@ class NoiseRaster:
                 validate_source_format(raslist[0])
                 validate_source_format(raslist[1])
                 validate_source_format(raslist[2])
+
+            # Check extent of each input raster
+            if len(raslist) == 1:
+                check_extent(raslist[0])
+            elif len(raslist) == 2:
+                check_extent(raslist[0])
+                check_extent(raslist[1])
+            else:
+                check_extent(raslist[0])
+                check_extent(raslist[1])
+                check_extent(raslist[2])
 
             # Check for existence of CRS definition of each GTiff input raster. asc is assumed to be EPSG:25832.
             if len(raslist) == 1:

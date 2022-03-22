@@ -39,19 +39,6 @@ def progress_callback(complete, message, callback_data):
     elif int(complete*100) % 3 == 0:
         print(f'{callback_data}', end='', flush=True)
 
-# Reclassification tables
-"""
-The selected table values are required input for the "Reclassify by Table" operation. The user selects "Lden" or "Lnight" in the user interface of the tool. 
-"Lden" categories are used for daytime noise and "Lnight" are used for night time noise. These value ranges are standards used in noise mapping. 
-The input raster is reclassified so that each raster cell gets the same value if it's cell value falls into one of the given ranges. 
-This pre-processing step dramatically improves the performance of the vectorization process.
-"""
-# Lden
-selectedTableLden = [54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, 74.49999, 70, 74.5, '', 75]
-
-# Lnight
-selectedTableLnight = [49.5, 54.49999, 50, 54.5, 59.49999, 55, 59.5, 64.49999, 60, 64.5, 69.49999, 65, 69.5, '', 70]
-
 def sum_sound_level_3D(sound_levels: np.array):
     """
     INPUT: array of dimension (m,n,l) - stack of sound levels on a 2D map
@@ -62,6 +49,8 @@ def sum_sound_level_3D(sound_levels: np.array):
     l: no. of sound levels per cell's node
 
     """
+    # Write progress to python console
+    log_console('\nRunning energetic addition...')
 
     if not isinstance(sound_levels, np.ndarray):
         raise TypeError('Input is not an array')
@@ -140,6 +129,9 @@ def source_raster_list(*folderpaths):
     rasterlist = []
     out_rasterlist = []
 
+    # Write progress to console
+    log_console("\nCreating lists of source raster files...")
+
     for path in folderpaths:
         if len(path) != 0:
             rasterlist.append(path)
@@ -155,6 +147,9 @@ def check_extent(extent_list:list):
     """
     Check extent of each raster is divisible by 100
     """
+    # Write progress to console
+    log_console("\nChecking extent of source rasters...")
+
     for ds in extent_list:
         # Open dataset
         check_extent = gdal.Open(ds)
@@ -184,6 +179,9 @@ def build_virtual_raster(in_vrt:list, temp_dir):
     """
     Build virtual multi-band raster as input to addition
     """
+    # Write progress to python console
+    log_console('\nCreating multi-band raster...')
+
     merged_vrt = temp_dir + 'allnoise.vrt'
 
     # Set options
@@ -210,6 +208,8 @@ def create_raster(sound_array:np.ndarray, merged_vrt, out_pth=None):
     """
     Create raster based on energetically added array
     """
+    # Write progress to python console
+    log_console('\nCreating energetic raster...')
 
     # Add tif name and file extension to directory file path.
     out_pth_ext = os.path.join(out_pth, c.REPROJECTED_TIF25832)
@@ -240,11 +240,6 @@ def create_raster(sound_array:np.ndarray, merged_vrt, out_pth=None):
     dsOut.SetProjection(outRasterSRS.ExportToWkt())
 
     return out_pth_ext
-
-    # Close the datasets
-    dsOut = None
-    out_pth_ext = None
-    ds = None
 
 def vectorize(in_ds, out_poly, selectedTableIndex, temp_dir):
     """
@@ -347,6 +342,8 @@ def check_projection(in_data: list):
     """
     Check for existence of a defined projection in GTiff files
     """
+    # Write progress to console
+    log_console("\nChecking CRS of source rasters...")
 
     for ds in in_data:
 
@@ -381,6 +378,9 @@ def reproject(input_files_path:list, temp_dir):
     Translate asc files to tifs. Source crs of asc files is assumed to be EPSG:25832.
     Set no data value to -99.0.
     """
+
+    # Write progress to console
+    log_console("\nReprojecting source rasters...")
 
     # List to hold list of reprojected rasters
     reprojectedlist = []
@@ -482,30 +482,17 @@ def merge_rasters(input_files_path:list, temp_dir, out_pth=None):
             # Create merged vrt
             out_vrt = temp_dir + str(counter) + "_25832.vrt"
 
-            # Create converted tif
-            out_tif = temp_dir + str(counter) + "_25832.tif"
-
             # Write progress to console
             log_console("\nRunning GDAL BuildVRT to create merged raster based on list of rasters...")
 
             # Set vrt options
             gdal.BuildVRT(out_vrt, input, resolution='highest', resampleAlg=gdal.gdalconst.GRA_Max, outputSRS='EPSG:25832', srcNodata=-99.0, callback=progress_callback, callback_data='.')
 
-            # Write progress to console
-            log_console("\nRunning GDAL Translate to convert virtual merged raster to tif...")
-
-            # Set translate options
-            to = gdal.TranslateOptions(format="GTiff", outputSRS="EPSG:25832", noData=-99.0, outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.')
-
-            # Convert vrt file to tif
-            gdal.Translate(out_tif, out_vrt, options=to)
-
             # Add merged raster to list of merged rasters
             merged_ras.append(out_vrt)
 
             # Close raster
             out_vrt = None
-            out_tif = None
 
             # Add 1 to counter
             counter += 1
@@ -539,10 +526,6 @@ def merge_rasters(input_files_path:list, temp_dir, out_pth=None):
         gdal.Translate(out_tif, out_vrt, options=to)
 
         return out_tif
-
-        # Close raster
-        out_vrt = None
-        out_tif = None
 
 
 def validate_source_format(srcData:list):
@@ -582,9 +565,6 @@ def set_nodata_value(in_ds):
 
     return in_ds
 
-    dst_ds = None
-    in_ds = None
-
 def reproject_3035(in_ras, out_ras):
     """
     Reproject the final output raster to EPSG:3035.
@@ -601,10 +581,10 @@ def reproject_3035(in_ras, out_ras):
               options=gdal.WarpOptions(format='GTiff', srcSRS='EPSG:25832', dstSRS='EPSG:3035',
                                        outputType=gdal.GDT_Float32, callback=progress_callback, callback_data='.'))
 
+    # Write progress to console
+    log_console("\nScript completed.")
 
     return out_pth_ext
-
-    out_pth_ext = None
 
 def delete_temp_directory(date_time):
 
